@@ -1,0 +1,13 @@
+{
+  "name": "memento-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "concurrently -c \"cyan.bold,green.bold\" -n \"WEB,API\" \"npm run start:web\" \"npm run start:api\"",
+    "start:web": "cd frontend && npm run dev",
+    "start:api": "cd backend && venv/bin/uvicorn main:app --reload --port 8000"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
