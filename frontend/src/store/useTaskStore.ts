@@ -8,8 +8,8 @@ interface TaskState {
   error: string | null;
   fetchTasks: () => Promise<void>;
   addTask: (taskData: TaskCreate) => Promise<void>;
-  // Nova ação adicionada aqui:
   toggleTask: (taskId: number) => Promise<void>;
+  deleteTask: (taskId: number) => Promise<void>;
 }
 
 export const useTaskStore = create<TaskState>((set, get) => ({
@@ -37,25 +37,34 @@ export const useTaskStore = create<TaskState>((set, get) => ({
     }
   },
 
-  // Nova função de Toggle com "Optimistic Update" (Atualização Otimista)
   toggleTask: async (taskId) => {
-    // 1. Guarda o estado anterior caso dê erro na API (para poder reverter)
     const previousTasks = get().tasks;
     
-    // 2. Atualiza a UI imediatamente (sem esperar o backend) para a sensação de 60fps
     set({
       tasks: previousTasks.map((task) =>
         task.id === taskId ? { ...task, is_completed: !task.is_completed } : task
       ),
     });
-
-    // 3. Tenta atualizar no backend
     try {
       await api.patch(`/tasks/${taskId}/toggle`);
     } catch (error) {
       console.error('Erro ao alternar tarefa:', error);
-      // Se falhar, reverte a interface para o estado original
       set({ tasks: previousTasks });
     }
   },
+
+  deleteTask: async (taskId) => {
+    const previousTasks = get().tasks;
+    set({
+      tasks: previousTasks.filter((task) => task.id !== taskId),
+    });
+
+    try {
+      await api.delete(`/tasks/${taskId}`);
+    } catch (error) {
+      console.error('Erro ao deletar tarefa:', error);
+      // Se falhar, reverte a interface para o estado original
+      set({ tasks: previousTasks });
+    }
+  }
 }));

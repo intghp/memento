@@ -67,6 +67,17 @@ async def toggle_task_completion(task_id: int, session: AsyncSession = Depends(g
 
     return task
 
+@app.delete("/api/tasks/{task_id}")
+async def delete_task(task_id: int, session: AsyncSession = Depends(get_session)):
+    task = await session.get(Task, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    await session.delete(task)
+    await session.commit()
+
+    return {"message": "Task deleted successfully"}
+
 # --- Notes CRUD ---
 
 @app.get("/api/notes", response_model=list[Note])

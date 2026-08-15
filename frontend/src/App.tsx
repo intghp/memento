@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useTaskStore } from './store/useTaskStore';
-import { Plus, Circle, CheckCircle2 } from 'lucide-react';
+import { Plus, Circle, CheckCircle2, Trash2 } from 'lucide-react';
 import { cn } from './utils/cn';
 
 export default function App() {
-  const { tasks, isLoading, fetchTasks, addTask, toggleTask } = useTaskStore();
+  const { tasks, isLoading, fetchTasks, addTask, toggleTask, deleteTask } = useTaskStore();
   
   const [newTaskTitle, setNewTaskTitle] = useState('');
 
@@ -24,7 +24,7 @@ export default function App() {
     <div className="min-h-screen bg-zinc-950 text-zinc-50 flex justify-center py-12 px-4">
       <div className="w-full max-w-2xl space-y-8">
         
-        {/* Cabeçalho */}
+        {/* Header */}
         <header>
           <h1 className="text-3xl font-bold tracking-tight">Memento</h1>
           <p className="text-zinc-400 mt-1">O seu espaço de foco local.</p>
@@ -56,7 +56,7 @@ export default function App() {
                 className="flex items-center gap-4 p-4 rounded-lg bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700 transition-colors group"
               >
                 <button 
-                  onClick={() => toggleTask(task.id)}
+                  onClick={() => toggleTask(task.id)} //
                   className="text-zinc-500 hover:text-emerald-400 transition-colors"
                 >
                   {task.is_completed ? (
@@ -71,6 +71,15 @@ export default function App() {
                 )}>
                   {task.title}
                 </span>
+
+                {/* Deletar Tarefa */}
+                <button
+                  onClick={() => deleteTask(task.id)}
+                  className="text-zinc-500 hover:text-red-500 transition-colors"
+                  title="Deletar tarefa"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
               </div>
             ))
           )}
