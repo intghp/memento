@@ -1,43 +1,37 @@
 import { create } from 'zustand';
 import { api } from '../api/client';
-import type { Note } from '../types';
+import type { Note, NoteUpdate } from '../types';
 
 interface NoteState {
   activeNote: Note | null;
-  fetchOrCreateNote: () => Promise<void>;
-  updateNote: (id: number, content: string) => Promise<void>;
+  isLoading: boolean;
+  fetchDailyNote: (date: string) => Promise<void>; // <-- Busca a nota do dia específico
+  updateNote: (id: number, updateData: NoteUpdate) => Promise<void>;
 }
 
 export const useNoteStore = create<NoteState>((set) => ({
   activeNote: null,
+  isLoading: false,
 
-  fetchOrCreateNote: async () => {
+  fetchDailyNote: async (date: string) => {
+    set({ isLoading: true });
     try {
-      const response = await api.get<Note[]>('/notes');
-    
-      if (response.data.length > 0) {
-        set({ activeNote: response.data[0] });
-      } else {
-    
-        const newNoteResponse = await api.post<Note>('/notes', {
-          title: 'Anotações Rápidas',
-          content: '# Bem-vindo ao Memento\n\nUse este espaço para suas ideias...'
-        });
-        set({ activeNote: newNoteResponse.data });
-      }
+      const response = await api.get<Note>(`/notes/daily?target_date=${date}`);
+      set({ activeNote: response.data, isLoading: false });
     } catch (error) {
-      console.error('Erro ao buscar notas:', error);
+      console.error('Erro ao buscar a nota diária:', error);
+      set({ isLoading: false });
     }
   },
 
-  updateNote: async (id, content) => {
+  updateNote: async (id, updateData) => {
     try {
-
       set((state) => ({
-        activeNote: state.activeNote ? { ...state.activeNote, content } : null
+        activeNote: state.activeNote 
+          ? { ...state.activeNote, ...updateData } 
+          : null
       }));
-
-      await api.put(`/notes/${id}`, { content });
+      await api.put(`/notes/${id}`, updateData);
     } catch (error) {
       console.error('Erro ao atualizar nota:', error);
     }
