@@ -6,7 +6,7 @@ interface TaskState {
   tasks: Task[];
   isLoading: boolean;
   error: string | null;
-  fetchTasks: () => Promise<void>;
+  fetchTasks: (date: string) => Promise<void>;
   addTask: (taskData: TaskCreate) => Promise<void>;
   toggleTask: (taskId: number) => Promise<void>;
   deleteTask: (taskId: number) => Promise<void>;
@@ -17,10 +17,10 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   isLoading: false,
   error: null,
 
-  fetchTasks: async () => {
+  fetchTasks: async (date: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await api.get<Task[]>('/tasks');
+      const response = await api.get<Task[]>(`/tasks?target_date=${date}`);
       set({ tasks: response.data, isLoading: false });
     } catch (error) {
       set({ error: 'Erro ao carregar as tarefas', isLoading: false });
