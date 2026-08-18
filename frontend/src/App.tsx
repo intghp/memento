@@ -3,35 +3,43 @@ import { MainLayout } from './components/layout/MainLayout';
 import { useDateStore } from './store/useDateStore';
 import { useTaskStore } from './store/useTaskStore';
 import { useNoteStore } from './store/useNoteStore';
+import { useHabitStore } from './store/useHabitStore';
 import { MiniCalendar } from './components/calendar/MiniCalendar';
 import { DailyNoteEditor } from './components/notes/DailyNoteEditor';
 import { TaskList } from './components/tasks/TaskList';
+import { HabitList } from './components/habits/HabitList';
 
 export default function App() {
   const { selectedDate } = useDateStore();
   const { fetchTasks } = useTaskStore();
   const { fetchDailyNote } = useNoteStore();
+  const { fetchHabitsAndLogs } = useHabitStore();
 
+  // Atualiza TUDO quando você troca de dia no calendário!
   useEffect(() => {
-    fetchTasks(selectedDate);
-    fetchDailyNote(selectedDate);
-  }, [selectedDate, fetchTasks, fetchDailyNote]);
+    fetchTasks(selectedDate); // <-- Busca as Tasks do dia!
+    fetchDailyNote(selectedDate); // <-- Busca as Daily Notes do dia!
+    fetchHabitsAndLogs(selectedDate); // <-- Busca os hábitos e check-ins do dia!
+  }, [selectedDate, fetchTasks, fetchDailyNote, fetchHabitsAndLogs]);
 
   return (
     <MainLayout
       sidebar={
-        <div className="space-y-6">
+        // Sidebar com MiniCalendar e lista de hábitos do dia
+        <div className="space-y-6 flex flex-col h-full">
           <MiniCalendar />
           
-          <div className="border-t border-zinc-800/50 pt-6">
-            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4">
+          <div className="border-t border-zinc-800/50 pt-6 flex-1 flex flex-col overflow-hidden">
+            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4 shrink-0">
               Hábitos de Hoje
             </h3>
-            <p className="text-zinc-600 text-sm">O Tracker de hábitos entrará aqui.</p>
+            
+            <HabitList />
           </div>
         </div>
       }
       
+      // Main content com lista de tarefas do dia e editor de notas diárias
       main={
         <div className="space-y-6">
           <header>
