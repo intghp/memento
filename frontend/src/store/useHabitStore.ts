@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { api } from '../api/client';
+import { subDays, format } from 'date-fns';
 import type { Habit, HabitCreate, HabitLog } from '../types';
+
+// ==========================================
+// INTERFACES E TIPAGENS
+// ==========================================
 
 interface HabitState {
   habits: Habit[];
@@ -11,6 +16,10 @@ interface HabitState {
   toggleHabit: (habitId: number, date: string) => Promise<void>;
 }
 
+// ==========================================
+// CONFIGURAÇÃO DO STORE (ZUSTAND)
+// ==========================================
+
 export const useHabitStore = create<HabitState>((set, get) => ({
   habits: [],
   logs: [],
@@ -19,9 +28,14 @@ export const useHabitStore = create<HabitState>((set, get) => ({
   fetchHabitsAndLogs: async (date: string) => {
     set({ isLoading: true });
     try {
+
+      const endDateObj = new Date(`${date}T12:00:00`);
+      const startDateObj = subDays(endDateObj, 6);
+      const startDateStr = format(startDateObj, 'yyyy-MM-dd');
+      
       const [habitsResponse, logsResponse] = await Promise.all([
         api.get<Habit[]>('/habits'),
-        api.get<HabitLog[]>(`/habits/logs?target_date=${date}`)
+        api.get<HabitLog[]>(`/habits/logs?start_date=${startDateStr}&end_date=${date}`)
       ]);
 
       set({
@@ -35,6 +49,10 @@ export const useHabitStore = create<HabitState>((set, get) => ({
     }
   },
 
+  // ==========================================
+  // CRIAÇÃO DE DADOS (CREATE)
+  // ==========================================
+
   addHabit: async (habitData) => {
     try {
       const response = await api.post<Habit>('/habits', habitData);
@@ -43,6 +61,10 @@ export const useHabitStore = create<HabitState>((set, get) => ({
       console.error('Erro ao criar hábito:', error);
     }
   },
+
+  // ==========================================
+  // ATUALIZAÇÃO (UPDATE)
+  // ==========================================
 
   toggleHabit: async (habitId, date) => {
     const previousLogs = get().logs;
@@ -73,7 +95,7 @@ export const useHabitStore = create<HabitState>((set, get) => ({
       const response = await api.post<HabitLog>(`/habits/${habitId}/toggle?target_date=${date}`);
       set((state) => ({
         logs: state.logs.map((log) =>
-          log.habit_id === habitId ? response.data : log
+          log.habit_id === habitId && log.target_date === date ? response.data : log
         )
       }));
     } catch (error) {

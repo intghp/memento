@@ -3,7 +3,7 @@ from sqlmodel import Field, SQLModel
 from datetime import date, datetime, time, timezone
 
 # ==========================================
-# 1. TASKS
+# 1. TASKS (TAREFAS PONTUAIS)
 # ==========================================
 
 class TaskBase(SQLModel):
@@ -25,7 +25,7 @@ class TaskCreate(TaskBase):
     pass
 
 # ==========================================
-# 2. DAILY NOTES
+# 2. DAILY NOTES (NOTAS DIÁRIAS - MARKDOWN)
 # ==========================================
 
 class NoteBase(SQLModel):
@@ -48,7 +48,7 @@ class NoteUpdate(SQLModel):
     content: Optional[str] = None
 
 # ==========================================
-# 3. HABIT TRACKING
+# 3. HABIT TRACKING (SISTEMA DE HÁBITOS)
 # ==========================================
 
 class HabitBase(SQLModel):
@@ -58,6 +58,8 @@ class HabitBase(SQLModel):
     frequency: str = "daily"
 
     specific_days: str | None = None
+
+    shift: str = "any"
 
 class Habit(HabitBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
