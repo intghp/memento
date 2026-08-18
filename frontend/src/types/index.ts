@@ -63,6 +63,13 @@ export interface HabitCreate {
   shift: ShiftType;
 }
 
+export interface HabitUpdate {
+  name?: string;
+  frequency?: 'daily' | 'specific_days';
+  specific_days?: string;
+  shift?: 'morning' | 'afternoon' | 'night' | 'any';
+}
+
 export interface HabitLog {
   id: number;
   habit_id: number;
