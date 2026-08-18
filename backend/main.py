@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Optional
 from sqlmodel import select
 from database import get_session, init_db
 from contextlib import asynccontextmanager
@@ -11,13 +12,19 @@ from models import (
     Note, NoteCreate, NoteUpdate,
     Habit, HabitCreate, HabitLog)
 
-# Define the lifespan context manager for the FastAPI application
+# ==========================================
+# CONFIGURAÇÃO DA APLICAÇÃO (LIFESPAN E CORS)
+# ==========================================
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     yield
 
-app = FastAPI(title="Memento API", lifespan=lifespan)
+app = FastAPI(
+    title="Memento API", 
+    lifespan=lifespan
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,10 +39,10 @@ async def health_check():
     return {"status": "ok", "message": "API está rodando perfeitamente!"}
 
 # ==========================================
-# 1.TASKS (CRUD)
+# 1. TAREFAS (TASKS CRUD)
 # ==========================================
 
-# List Tasks by Day 
+# List Tasks
 @app.get("/api/tasks", response_model=list[Task])
 async def get_tasks(
     session: AsyncSession = Depends(get_session),
@@ -71,6 +78,7 @@ async def toggle_task_completion(task_id: int, session: AsyncSession = Depends(g
 
     return task
 
+# Delete Task
 @app.delete("/api/tasks/{task_id}")
 async def delete_task(task_id: int, session: AsyncSession = Depends(get_session)):
     task = await session.get(Task, task_id)
@@ -83,7 +91,7 @@ async def delete_task(task_id: int, session: AsyncSession = Depends(get_session)
     return {"message": "Task deleted successfully"}
 
 # ==========================================
-# 2. DAILY NOTES
+# 2. NOTAS DIÁRIAS (DAILY NOTES)
 # ==========================================
 
 @app.get("/api/notes/daily", response_model=Note)
@@ -110,6 +118,7 @@ async def get_notes(
 
     return note
 
+# Cria uma nota manualmente
 @app.post("/api/notes", response_model=Note)
 async def create_note(note: NoteCreate, session: AsyncSession = Depends(get_session)):
     db_note = Note.model_validate(note)
@@ -119,6 +128,7 @@ async def create_note(note: NoteCreate, session: AsyncSession = Depends(get_sess
 
     return db_note
 
+# Atualiza a nota diária existente com um autosave
 @app.put("/api/notes/{note_id}", response_model=Note)
 async def update_note(note_id: int, note_update: NoteUpdate, session: AsyncSession = Depends(get_session)):
     db_note = await session.get(Note, note_id)
@@ -138,11 +148,13 @@ async def update_note(note_id: int, note_update: NoteUpdate, session: AsyncSessi
 # 3. HABITS AND DAILY CHECK-INS
 # ==========================================
 
+# Retorna os hábitos cadastrados pelo usuário
 @app.get("/api/habits", response_model=list[Habit])
 async def get_habits(session: AsyncSession = Depends(get_session)):
     result = await session.exec(select(Habit))
     return result.all()
 
+# Cria um novo hábito
 @app.post("/api/habits", response_model=Habit)
 async def create_habit(habit: HabitCreate, session: AsyncSession = Depends(get_session)):
     db_habit = Habit.model_validate(habit)
@@ -151,15 +163,28 @@ async def create_habit(habit: HabitCreate, session: AsyncSession = Depends(get_s
     await session.refresh(db_habit)
     return db_habit
 
+# Retorna o histórico de check-ins
 @app.get("/api/habits/logs", response_model=list[HabitLog])
 async def get_habit_logs(
     session: AsyncSession = Depends(get_session),
-    target_date: date = Query(..., description="Data para buscar progresso")
+    target_date: Optional[date] = Query(None, description="Data específica"),
+    start_date: Optional[date] = Query(None, description="Data inicial"),
+    end_date: Optional[date] = Query(None, description="Data final")
 ):
-    query = select(HabitLog).where(HabitLog.target_date == target_date)
+    query = select(HabitLog)
+
+    if target_date:
+        query = query.where(HabitLog.target_date == target_date)
+    elif start_date and end_date:
+        query = query.where(
+            HabitLog.target_date >= start_date,
+            HabitLog.target_date <= end_date
+            )
+
     result = await session.exec(query)
     return result.all()
 
+# Marcar ou desmarcar o hábito
 @app.post("/api/habits/{habit_id}/toggle", response_model=HabitLog)
 async def toggle_habit(
     habit_id: int,
