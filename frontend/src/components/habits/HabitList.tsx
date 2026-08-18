@@ -1,83 +1,332 @@
 import { useState } from 'react';
-import { Plus, CheckSquare, Square } from 'lucide-react';
+import { Plus, Check, X, Sunrise, Sun, Moon, Maximize } from 'lucide-react';
 import { useHabitStore } from '../../store/useHabitStore';
 import { useDateStore } from '../../store/useDateStore';
 import { cn } from '../../utils/cn';
-import { parseISO } from 'date-fns';
+import { subDays, format } from 'date-fns';
+import type { Habit } from '../../types';
+
+// ==========================================
+// CONSTANTES & CONFIGURAÇÕES (ESTÁTICOS)
+// ==========================================
+
+const WEEK_DAYS = [
+  { id: '0', label: 'D' },
+  { id: '1', label: 'S' },
+  { id: '2', label: 'T' },
+  { id: '3', label: 'Q' },
+  { id: '4', label: 'Q' },
+  { id: '5', label: 'S' },
+  { id: '6', label: 'S' },
+];
+
+const SHORT_DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+// ==========================================
+// CONFIGURAÇÃO DOS TURNOS
+// ==========================================
+const SHIFTS = [
+  { id: 'morning', label: 'Manhã', icon: Sunrise, color: 'text-amber-400', bgHover: 'hover:bg-amber-400/10' },
+  { id: 'afternoon', label: 'Tarde', icon: Sun, color: 'text-orange-400', bgHover: 'hover:bg-orange-400/10' },
+  { id: 'night', label: 'Noite', icon: Moon, color: 'text-indigo-400', bgHover: 'hover:bg-indigo-400/10' },
+  { id: 'any', label: 'Qualquer Hora', icon: Maximize, color: 'text-zinc-400', bgHover: 'hover:bg-zinc-400/10' },
+] as const;
+
+type ShiftType = 'morning' | 'afternoon' | 'night' | 'any';
+
+// ==========================================
+// COMPONENTE PRINCIPAL
+// ==========================================
 
 export function HabitList() {
+
+  // ==========================================
+  // ESTADO GLOBAL (ZUSTAND)
+  // ==========================================
   const { habits, logs, isLoading, addHabit, toggleHabit } = useHabitStore();
   const { selectedDate } = useDateStore();
+  
+  // ==========================================
+  // ESTADO LOCAL (UI E FORMULÁRIO)
+  // ==========================================
+  const [isCreating, setIsCreating] = useState(false);
   const [newHabitName, setNewHabitName] = useState('');
+  const [selectedDays, setSelectedDays] = useState<string[]>(['0', '1', '2', '3', '4', '5', '6']);
+  const [selectedShift, setSelectedShift] = useState<ShiftType>('any');
+
+  // ==========================================
+  // HANDLERS (AÇÕES DO USUÁRIO)
+  // ==========================================
 
   const handleAddHabit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newHabitName.trim()) return;
+
+    const isDaily = selectedDays.length === 7 || selectedDays.length === 0;
     
-    // Cria um hábito diário padrão
     await addHabit({ 
       name: newHabitName,
-      frequency: 'daily'
+      frequency: isDaily ? 'daily' : 'specific_days',
+      specific_days: isDaily ? undefined : selectedDays.join(','),
+      shift: selectedShift
     });
+
     setNewHabitName('');
+    setIsCreating(false);
+    setSelectedDays(['0', '1', '2', '3', '4', '5', '6']);
+    setSelectedShift('any');
   };
 
-  const currentDayOfWeek = parseISO(selectedDate).getDay().toString(); // 0 = Domingo, 6 = Sábado
-  
-  const activeHabits = habits.filter(habit => {
-    if (habit.frequency === 'daily') return true;
-    if (habit.frequency === 'specific_days' && habit.specific_days?.includes(currentDayOfWeek)) return true;
-    return true;
+  const toggleDay = (id: string) => {
+    setSelectedDays(prev => 
+      prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]
+    );
+  };
+
+  // GERAÇÃO DA GRADE (Histórico de 7 Dias)
+  const endDateObj = new Date(`${selectedDate}T12:00:00`);
+  const last7Days = Array.from({ length: 7 }).map((_, i) => {
+    // Conta 6 dias para trás até chegar em 0 (o dia atual)
+    const dateObj = subDays(endDateObj, 6 - i);
+    return {
+      dateStr: format(dateObj, 'yyyy-MM-dd'),
+      dayOfWeek: dateObj.getDay(),
+      dayOfMonth: format(dateObj, 'dd')
+    };
   });
 
+  // ==========================================
+  // AGRUPAMENTO DE HÁBITOS POR TURNO
+  // ==========================================
+  const groupedHabits = habits.reduce((acc, habit) => {
+    const shift = habit.shift || 'any'; // Proteção contra dados antigos no banco
+    if (!acc[shift]) acc[shift] = [];
+    acc[shift].push(habit);
+    return acc;
+  }, {} as Record<string, Habit[]>);
+
+  // ==========================================
+  // RENDERIZAÇÃO (UI)
+  // ==========================================
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Formulário de Criação de Hábito */}
-      <form onSubmit={handleAddHabit} className="relative mb-4">
-        <Plus className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 w-4 h-4" />
-        <input
-          type="text"
-          value={newHabitName}
-          onChange={(e) => setNewHabitName(e.target.value)}
-          placeholder="Novo hábito (ex: Ler 10 pág)"
-          className="w-full bg-zinc-900/50 border border-zinc-800 rounded-md py-2 pl-9 pr-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-all"
-          disabled={isLoading}
-        />
-      </form>
+    <div className="flex flex-col h-full bg-zinc-900/20 rounded-2xl border border-zinc-800/50 p-6">
+      
+      {/* ========================================== */}
+      {/* Header */}
+      {/* ========================================== */}
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h2 className="text-xl font-bold text-zinc-100">Rastreador de Hábitos</h2>
+          <p className="text-sm text-zinc-500 mt-1">Acompanhe sua consistência nos últimos 7 dias</p>
+        </div>
 
-      {/* Lista de Hábitos do Dia */}
-      <div className="space-y-1 overflow-y-auto custom-scrollbar pr-1">
-        {isLoading && habits.length === 0 ? (
-          <p className="text-zinc-600 text-xs text-center py-2">Carregando...</p>
-        ) : activeHabits.length === 0 ? (
-          <p className="text-zinc-600 text-xs text-center py-2">Nenhum hábito rastreado.</p>
-        ) : (
-          activeHabits.map((habit) => {
-            const log = logs.find(l => l.habit_id === habit.id);
-            const isCompleted = log ? log.is_completed : false;
+        {!isCreating && (
+          <button 
+            onClick={() => setIsCreating(true)}
+            className="flex items-center gap-2 text-sm bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Adicionar hábito</span>
+          </button>
+        )}
+      </div>
 
-            return (
-              <button
-                key={habit.id}
-                onClick={() => toggleHabit(habit.id, selectedDate)}
-                className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-zinc-800/50 transition-colors group text-left"
-              >
-                <div className={cn(
-                  "text-zinc-500 transition-colors",
-                  isCompleted ? "text-emerald-500" : "group-hover:text-zinc-400"
-                )}>
-                  {isCompleted ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+      {/* ========================================== */}
+      {/* Formulário de Criação (MODO EXPANDIDO*/}
+      {/* ========================================== */}
+      {isCreating && (
+        <form onSubmit={handleAddHabit} className="mb-8 bg-zinc-900 rounded-xl border border-zinc-800 p-5 relative shadow-xl">
+          <button 
+            type="button" 
+            onClick={() => setIsCreating(false)}
+            className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          
+          <div className="space-y-6">
+            <div>
+              <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Nome do Hábito</label>
+              <input
+                type="text"
+                value={newHabitName}
+                onChange={(e) => setNewHabitName(e.target.value)}
+                placeholder="Novo hábito..."
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                autoFocus
+                disabled={isLoading}
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              {/* ========================================== */}
+              {/* SELETOR DE TURNOS NO FORMULÁRIO */}
+              {/* ========================================== */}
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Turno (Período)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {SHIFTS.map(shift => {
+                    const Icon = shift.icon;
+                    const isSelected = selectedShift === shift.id;
+                    return (
+                      <button
+                        key={shift.id}
+                        type="button"
+                        onClick={() => setSelectedShift(shift.id as ShiftType)}
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-all",
+                          isSelected 
+                            ? "bg-zinc-800 border-zinc-700 text-zinc-200" 
+                            : "bg-zinc-950 border-zinc-800/50 text-zinc-500 hover:bg-zinc-900"
+                        )}
+                      >
+                        <Icon className={cn("w-4 h-4", isSelected ? shift.color : "text-zinc-600")} />
+                        {shift.label}
+                      </button>
+                    )
+                  })}
                 </div>
-                
-                <span className={cn(
-                  "text-sm transition-all",
-                  isCompleted ? "text-zinc-500 line-through" : "text-zinc-300"
-                )}>
-                  {habit.name}
-                </span>
-              </button>
-            );
-          })
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Repete na:</label>
+                <div className="flex gap-2">
+                  {WEEK_DAYS.map(day => {
+                    const isSelected = selectedDays.includes(day.id);
+                    return (
+                      <button
+                        key={day.id}
+                        type="button"
+                        onClick={() => toggleDay(day.id)}
+                        className={cn(
+                          "w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center transition-all",
+                          isSelected ? "bg-emerald-500 text-zinc-950 shadow-lg shadow-emerald-500/20" : "bg-zinc-950 text-zinc-500 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-300"
+                        )}
+                      >
+                        {day.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+            </div>
+          </div>
+          
+          <div className="mt-6 flex justify-end pt-4 border-t border-zinc-800/50">
+            <button 
+              type="submit" 
+              disabled={!newHabitName.trim()} 
+              className="bg-emerald-500 hover:bg-emerald-400 disabled:bg-zinc-800 disabled:text-zinc-600 text-zinc-950 px-6 py-2.5 rounded-lg font-bold transition-colors"
+            >
+              Salvar Hábito
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Lista de Hábitos e a Grade de 7 Dias */}
+      <div className="flex-1 overflow-auto custom-scrollbar">
+        {isLoading && habits.length === 0 ? (
+          <p className="text-zinc-600 text-center py-10">Carregando...</p>
+        ) : habits.length === 0 ? (
+          <div className="text-center py-20 border-2 border-dashed border-zinc-800/50 rounded-2xl">
+            <p className="text-zinc-600 text-sm">Nenhum hábito para hoje.</p>
+          </div>
+        ) : (
+          <div className="min-w-[600px] space-y-8">
+            
+            {/* ========================================== */}
+            {/* RENDERIZAÇÃO SEPARADA POR TURNOS */}
+            {/* ========================================== */}
+            {SHIFTS.map(shiftConfig => {
+              const shiftHabits = groupedHabits[shiftConfig.id] || [];
+              
+              // Se não houver hábitos cadastrados para este turno, esconde a seção
+              if (shiftHabits.length === 0) return null;
+
+              const Icon = shiftConfig.icon;
+
+              return (
+                <div key={shiftConfig.id} className="space-y-3">
+                  
+                  {/* CABEÇALHO DA TABELA (Agora mostra o nome do Turno em vez de "Hábito") */}
+                  <div className="grid grid-cols-[minmax(200px,1fr)_repeat(7,minmax(48px,1fr))] gap-4 px-4 items-end">
+                    <div className="flex items-center gap-2 pb-2">
+                      <Icon className={cn("w-5 h-5", shiftConfig.color)} />
+                      <h3 className="font-semibold text-zinc-300">{shiftConfig.label}</h3>
+                    </div>
+                    
+                    {last7Days.map((day) => (
+                      <div key={day.dateStr} className="flex flex-col items-center justify-end pb-2 opacity-60">
+                        <span className="text-[10px] text-zinc-500 uppercase font-semibold">{SHORT_DAY_NAMES[day.dayOfWeek]}</span>
+                        <span className={cn(
+                          "text-sm font-bold mt-1",
+                          day.dateStr === selectedDate ? "text-emerald-400" : "text-zinc-400"
+                        )}>
+                          {day.dayOfMonth}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    {shiftHabits.map((habit) => (
+                      <div key={habit.id} className="grid grid-cols-[minmax(200px,1fr)_repeat(7,minmax(48px,1fr))] gap-4 px-4 py-3 bg-zinc-900/40 hover:bg-zinc-900/80 rounded-xl border border-zinc-800/30 transition-colors items-center group">
+                        
+                        {/* Linha 1: Checkbox e Nome do Hábito */}
+                        <div className="font-medium text-zinc-200 truncate pr-4 pl-7">
+                          {habit.name}
+                        </div>
+
+                        {/* Linha 2: O Mini-Heatmap dos últimos 7 dias */}
+                        {last7Days.map((day) => {
+                          // Lógica de Filtro dos Hábitos do Dia
+                          const isActiveThisDay = habit.frequency === 'daily' || habit.specific_days?.includes(day.dayOfWeek.toString());
+                          
+                          if (!isActiveThisDay) {
+                            return (
+                              <div key={day.dateStr} className="flex justify-center">
+                                <span className="text-zinc-800 text-lg leading-none">-</span>
+                              </div>
+                            );
+                          }
+
+                          // O check-in do dia SELECIONADO para mostrar no quadrado principal
+                          const log = logs.find(l => l.habit_id === habit.id && l.target_date === day.dateStr);
+                          const isCompleted = log ? log.is_completed : false;
+                          
+                          // Destaca visualmente qual dia é "hoje" na grade
+                          const isSelectedDay = day.dateStr === selectedDate;
+
+                          return (
+                            <div key={day.dateStr} className="flex justify-center">
+                              <button
+                                title={day.dateStr} // Mostra a data se o mouse passar por cima
+                                onClick={() => toggleHabit(habit.id, day.dateStr)}
+                                className={cn(
+                                  "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 border",
+                                  isCompleted 
+                                    ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-500" 
+                                    : isSelectedDay 
+                                      ? "bg-zinc-800/50 border-zinc-700 text-zinc-600 hover:border-emerald-500/50 hover:text-emerald-500/50" 
+                                      : "bg-transparent border-zinc-800/50 text-zinc-700 hover:border-zinc-600 hover:text-zinc-500"
+                                )}
+                              >
+                                {isCompleted && <Check className="w-5 h-5" />}
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </div>
