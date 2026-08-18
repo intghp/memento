@@ -1,5 +1,11 @@
 // ==========================================
-// TASKS
+// TIPOS COMPARTILHADOS
+// ==========================================
+export type ShiftType = 'morning' | 'afternoon' | 'night' | 'any';
+export type FrequencyType = 'daily' | 'specific_days';
+
+// ==========================================
+// 1. TASKS (TAREFAS PONTUAIS)
 // ==========================================
 export interface Task {
   id: number;
@@ -21,7 +27,7 @@ export interface TaskCreate {
 }
 
 // ==========================================
-// DAILY NOTES
+// 2. DAILY NOTES (NOTAS DIÁRIAS - MARKDOWN)
 // ==========================================
 export interface Note {
   id: number;
@@ -37,22 +43,24 @@ export interface NoteUpdate {
 }
 
 // ==========================================
-// HABITS
+// 3. HABIT TRACKING (SISTEMA DE HÁBITOS)
 // ==========================================
 export interface Habit {
   id: number;
   name: string;
   scheduled_time?: string;
-  frequency: string;
+  frequency: FrequencyType;
   specific_days?: string;
+  shift: ShiftType
   created_at: string;
 }
 
 export interface HabitCreate {
   name: string;
   scheduled_time?: string;
-  frequency?: string;
+  frequency: FrequencyType;
   specific_days?: string;
+  shift: ShiftType;
 }
 
 export interface HabitLog {
