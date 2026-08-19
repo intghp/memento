@@ -27,16 +27,19 @@ export function TaskList() {
           value={newTaskTitle}
           onChange={(e) => setNewTaskTitle(e.target.value)}
           placeholder="O que precisa ser feito neste dia?"
-          className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-4 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 transition-all"
+          className="w-full bg-zinc-900 border border-zinc-800 rounded-lg py-4 pl-12 pr-4 text-zinc-100 placeholder:text-zinc-500 outline-none focus:outline-none focus:border-emerald-500 focus:ring-0 transition-colors duration-200"
           disabled={isLoading}
         />
       </form>
 
-      <div className="space-y-2">
-        {isLoading ? (
-          <p className="text-zinc-500 text-center py-4">Carregando tarefas...</p>
-        ) : tasks.length === 0 ? (
-          <p className="text-zinc-500 text-center py-4">Nenhuma tarefa para este dia.</p>
+      <div className={cn(
+        "space-y-2 transition-all duration-300",
+        isLoading ? "opacity-40 pointer-events-none" : "opacity-100"
+      )}>
+        {tasks.length === 0 ? (
+          <div className="text-center py-10 border-2 border-dashed border-zinc-800/50 rounded-xl mt-4">
+            <p className="text-zinc-600 text-sm">Nenhuma tarefa para este dia.</p>
+          </div>
         ) : (
           tasks.map((task) => (
             <div key={task.id} className="flex items-center gap-4 p-4 rounded-lg bg-zinc-900/50 border border-zinc-800/50 hover:border-zinc-700 transition-colors group">

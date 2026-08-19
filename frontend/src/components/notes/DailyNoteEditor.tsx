@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import { Edit3, Eye } from 'lucide-react';
 import { useNoteStore } from '../../store/useNoteStore';
 import { useDebounce } from '../../hooks/useDebounce';
+import { cn } from '../../utils/cn';
 
 export function DailyNoteEditor() {
   const { activeNote, updateNote, isLoading } = useNoteStore();
@@ -27,12 +28,11 @@ export function DailyNoteEditor() {
     }
   }, [debouncedContent]);
 
-  if (isLoading) {
-    return <div className="text-zinc-500 animate-pulse flex-1 flex items-center justify-center">Carregando nota do dia...</div>;
-  }
-
   return (
-    <div className="flex flex-col h-full bg-zinc-900/30 border border-zinc-800/50 rounded-2xl overflow-hidden shadow-sm">
+    <div className={cn(
+      "flex flex-col h-full bg-zinc-900/30 border border-zinc-800/50 rounded-2xl overflow-hidden shadow-sm transition-all duration-300",
+      isLoading ? "opacity-40 pointer-events-none" : "opacity-100"
+    )}>
       {/* Cabeçalho */}
       <div className="flex items-center justify-between p-4 border-b border-zinc-800/50 bg-zinc-900/80">
         <h2 className="text-sm font-semibold text-zinc-300">
