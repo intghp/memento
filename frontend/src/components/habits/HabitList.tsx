@@ -262,12 +262,13 @@ export function HabitList() {
       )}
 
       {/* Lista de Hábitos e a Grade de 7 Dias */}
-      <div className="flex-1 overflow-auto custom-scrollbar">
-        {isLoading && habits.length === 0 ? (
-          <p className="text-zinc-600 text-center py-10">Carregando...</p>
-        ) : habits.length === 0 ? (
+      <div className={cn(
+        "flex-1 overflow-auto custom-scrollbar transition-all duration-300",
+        isLoading ? "opacity-40 pointer-events-none" : "opacity-100"
+      )}>
+        {habits.length === 0 && !isLoading ? (
           <div className="text-center py-20 border-2 border-dashed border-zinc-800/50 rounded-2xl">
-            <p className="text-zinc-600 text-sm">Nenhum hábito para hoje.</p>
+            <p className="text-zinc-600 text-sm">Nenhum hábito cadastrado.</p>
           </div>
         ) : (
           <div className="min-w-[600px] space-y-8">
