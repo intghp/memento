@@ -68,6 +68,12 @@ class Habit(HabitBase, table=True):
 class HabitCreate(HabitBase):
     pass
 
+class HabitUpdate(SQLModel):
+    name: str | None = None
+    frequency: str | None = None
+    specific_days: str | None = None
+    shift: str | None = None
+
 class HabitLog(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     habit_id: int = Field(foreign_key="habit.id")

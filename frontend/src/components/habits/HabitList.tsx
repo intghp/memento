@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Check, X, Sunrise, Sun, Moon, Maximize } from 'lucide-react';
+import { Plus, Check, X, Sunrise, Sun, Moon, Maximize, Settings, Trash2, Pencil } from 'lucide-react';
 import { useHabitStore } from '../../store/useHabitStore';
 import { useDateStore } from '../../store/useDateStore';
 import { cn } from '../../utils/cn';
@@ -43,13 +43,16 @@ export function HabitList() {
   // ==========================================
   // ESTADO GLOBAL (ZUSTAND)
   // ==========================================
-  const { habits, logs, isLoading, addHabit, toggleHabit } = useHabitStore();
+  const { habits, logs, isLoading, addHabit, toggleHabit, updateHabit, deleteHabit } = useHabitStore();
   const { selectedDate } = useDateStore();
   
   // ==========================================
   // ESTADO LOCAL (UI E FORMULÁRIO)
   // ==========================================
   const [isCreating, setIsCreating] = useState(false);
+  const [isConfigMode, setIsConfigMode] = useState(false);
+
+  const [editingHabitId, setEditingHabitId] = useState<number | null>(null);
   const [newHabitName, setNewHabitName] = useState('');
   const [selectedDays, setSelectedDays] = useState<string[]>(['0', '1', '2', '3', '4', '5', '6']);
   const [selectedShift, setSelectedShift] = useState<ShiftType>('any');
@@ -58,21 +61,44 @@ export function HabitList() {
   // HANDLERS (AÇÕES DO USUÁRIO)
   // ==========================================
 
-  const handleAddHabit = async (e: React.FormEvent) => {
+  const handleSaveHabit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newHabitName.trim()) return;
 
     const isDaily = selectedDays.length === 7 || selectedDays.length === 0;
-    
-    await addHabit({ 
+    const habitPayload = {
       name: newHabitName,
-      frequency: isDaily ? 'daily' : 'specific_days',
+      frequency: isDaily ? ('daily' as const) : ('specific_days' as const),
       specific_days: isDaily ? undefined : selectedDays.join(','),
       shift: selectedShift
-    });
+    };
+    
+    if (editingHabitId) {
+      await updateHabit(editingHabitId, habitPayload);
+    } else {
+      await addHabit(habitPayload);
+    }
 
-    setNewHabitName('');
+    closeForm();
+  };
+
+  const openEditForm = (habit: Habit) => {
+    setEditingHabitId(habit.id);
+    setNewHabitName(habit.name);
+    setSelectedShift(habit.shift || 'any');
+    if (habit.frequency === 'specific_days' && habit.specific_days) {
+      setSelectedDays(habit.specific_days.split(','));
+    } else {
+      setSelectedDays(['0', '1', '2', '3', '4', '5', '6']);
+    }
+    setIsCreating(true);
+    setIsConfigMode(false); // Fecha o modo configuração para mostrar o formulário
+  };
+
+  const closeForm = () => {
     setIsCreating(false);
+    setEditingHabitId(null);
+    setNewHabitName('');
     setSelectedDays(['0', '1', '2', '3', '4', '5', '6']);
     setSelectedShift('any');
   };
@@ -115,31 +141,39 @@ export function HabitList() {
       {/* ========================================== */}
       {/* Header */}
       {/* ========================================== */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-xl font-bold text-zinc-100">Rastreador de Hábitos</h2>
-          <p className="text-sm text-zinc-500 mt-1">Acompanhe sua consistência nos últimos 7 dias</p>
-        </div>
+      {!isCreating && (
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setIsConfigMode(!isConfigMode)}
+              className={cn(
+                "p-2 rounded-lg transition-colors border",
+                isConfigMode 
+                  ? "bg-zinc-800 text-zinc-200 border-zinc-700" 
+                  : "bg-transparent text-zinc-500 border-transparent hover:bg-zinc-800/50 hover:text-zinc-300"
+              )}
+              title="Configurar Hábitos"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
 
-        {!isCreating && (
-          <button 
-            onClick={() => setIsCreating(true)}
-            className="flex items-center gap-2 text-sm bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Adicionar hábito</span>
-          </button>
+            <button 
+              onClick={() => { closeForm(); setIsCreating(true); }}
+              className="flex items-center gap-2 text-sm bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Adicionar hábito</span>
+            </button>
+          </div>
         )}
-      </div>
 
       {/* ========================================== */}
       {/* Formulário de Criação (MODO EXPANDIDO*/}
       {/* ========================================== */}
       {isCreating && (
-        <form onSubmit={handleAddHabit} className="mb-8 bg-zinc-900 rounded-xl border border-zinc-800 p-5 relative shadow-xl">
+        <form onSubmit={handleSaveHabit} className="mb-8 bg-zinc-900 rounded-xl border border-zinc-800 p-5 relative shadow-xl">
           <button 
             type="button" 
-            onClick={() => setIsCreating(false)}
+            onClick={closeForm}
             className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300"
           >
             <X className="w-5 h-5" />
@@ -221,7 +255,7 @@ export function HabitList() {
               disabled={!newHabitName.trim()} 
               className="bg-emerald-500 hover:bg-emerald-400 disabled:bg-zinc-800 disabled:text-zinc-600 text-zinc-950 px-6 py-2.5 rounded-lg font-bold transition-colors"
             >
-              Salvar Hábito
+              {editingHabitId ? 'Salvar Alterações' : 'Salvar Hábito'}
             </button>
           </div>
         </form>
@@ -259,67 +293,100 @@ export function HabitList() {
                       <h3 className="font-semibold text-zinc-300">{shiftConfig.label}</h3>
                     </div>
                     
-                    {last7Days.map((day) => (
-                      <div key={day.dateStr} className="flex flex-col items-center justify-end pb-2 opacity-60">
-                        <span className="text-[10px] text-zinc-500 uppercase font-semibold">{SHORT_DAY_NAMES[day.dayOfWeek]}</span>
-                        <span className={cn(
-                          "text-sm font-bold mt-1",
-                          day.dateStr === selectedDate ? "text-emerald-400" : "text-zinc-400"
-                        )}>
-                          {day.dayOfMonth}
-                        </span>
-                      </div>
-                    ))}
+                    {/* MODO DE CONFIGURAÇÃO */}
+                    {isConfigMode ? (
+                       <div className="col-span-7 flex justify-end pb-8 opacity-60 pr-2">
+                         <span className="text-[10px] text-zinc-500 uppercase font-semibold tracking-wider">Ações</span>
+                       </div>
+                    ) : (
+                      last7Days.map((day) => (
+                        <div key={day.dateStr} className="flex flex-col items-center justify-end pb-2 opacity-60">
+                          <span className="text-[10px] text-zinc-500 uppercase font-semibold">{SHORT_DAY_NAMES[day.dayOfWeek]}</span>
+                          <span className={cn(
+                            "text-sm font-bold mt-1",
+                            day.dateStr === selectedDate ? "text-emerald-400" : "text-zinc-400"
+                          )}>
+                            {day.dayOfMonth}
+                          </span>
+                        </div>
+                      ))
+                    )}
                   </div>
 
                   <div className="space-y-2">
                     {shiftHabits.map((habit) => (
-                      <div key={habit.id} className="grid grid-cols-[minmax(200px,1fr)_repeat(7,minmax(48px,1fr))] gap-4 px-4 py-3 bg-zinc-900/40 hover:bg-zinc-900/80 rounded-xl border border-zinc-800/30 transition-colors items-center group">
+                      <div key={habit.id} className={cn(
+                        "grid gap-4 px-4 py-3 bg-zinc-900/40 hover:bg-zinc-900/80 rounded-xl border border-zinc-800/30 transition-colors items-center group",
+                        isConfigMode ? "grid-cols-[1fr_auto]" : "grid-cols-[minmax(200px,1fr)_repeat(7,minmax(48px,1fr))]"
+                      )}>
                         
-                        {/* Linha 1: Checkbox e Nome do Hábito */}
                         <div className="font-medium text-zinc-200 truncate pr-4 pl-7">
                           {habit.name}
                         </div>
 
-                        {/* Linha 2: O Mini-Heatmap dos últimos 7 dias */}
-                        {last7Days.map((day) => {
-                          // Lógica de Filtro dos Hábitos do Dia
-                          const isActiveThisDay = habit.frequency === 'daily' || habit.specific_days?.includes(day.dayOfWeek.toString());
-                          
-                          if (!isActiveThisDay) {
+                        {/* MODO DE CONFIGURAÇÃO (Botões Editar / Excluir) */}
+                        {isConfigMode ? (
+                          <div className="flex items-center gap-2 pr-2">
+                            <button
+                              onClick={() => openEditForm(habit)}
+                              className="p-2 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors"
+                              title="Editar"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if(window.confirm('Tem certeza que deseja excluir este hábito e todo o seu histórico?')) {
+                                  deleteHabit(habit.id);
+                                }
+                              }}
+                              className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                              title="Excluir"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          // MODO NORMAL: O Mini-Heatmap dos últimos 7 dias 
+                          last7Days.map((day) => {
+                            // Lógica de Filtro dos Hábitos do Dia
+                            const isActiveThisDay = habit.frequency === 'daily' || habit.specific_days?.includes(day.dayOfWeek.toString());
+                            
+                            if (!isActiveThisDay) {
+                              return (
+                                <div key={day.dateStr} className="flex justify-center">
+                                  <span className="text-zinc-800 text-lg leading-none">-</span>
+                                </div>
+                              );
+                            }
+
+                            // O check-in do dia SELECIONADO para mostrar no quadrado principal
+                            const log = logs.find(l => l.habit_id === habit.id && l.target_date === day.dateStr);
+                            const isCompleted = log ? log.is_completed : false;
+                            
+                            // Destaca visualmente qual dia é "hoje" na grade
+                            const isSelectedDay = day.dateStr === selectedDate;
+
                             return (
                               <div key={day.dateStr} className="flex justify-center">
-                                <span className="text-zinc-800 text-lg leading-none">-</span>
+                                <button
+                                  title={day.dateStr} // Mostra a data se o mouse passar por cima
+                                  onClick={() => toggleHabit(habit.id, day.dateStr)}
+                                  className={cn(
+                                    "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 border",
+                                    isCompleted 
+                                      ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-500" 
+                                      : isSelectedDay 
+                                        ? "bg-zinc-800/50 border-zinc-700 text-zinc-600 hover:border-emerald-500/50 hover:text-emerald-500/50" 
+                                        : "bg-transparent border-zinc-800/50 text-zinc-700 hover:border-zinc-600 hover:text-zinc-500"
+                                  )}
+                                >
+                                  {isCompleted && <Check className="w-5 h-5" />}
+                                </button>
                               </div>
                             );
-                          }
-
-                          // O check-in do dia SELECIONADO para mostrar no quadrado principal
-                          const log = logs.find(l => l.habit_id === habit.id && l.target_date === day.dateStr);
-                          const isCompleted = log ? log.is_completed : false;
-                          
-                          // Destaca visualmente qual dia é "hoje" na grade
-                          const isSelectedDay = day.dateStr === selectedDate;
-
-                          return (
-                            <div key={day.dateStr} className="flex justify-center">
-                              <button
-                                title={day.dateStr} // Mostra a data se o mouse passar por cima
-                                onClick={() => toggleHabit(habit.id, day.dateStr)}
-                                className={cn(
-                                  "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 border",
-                                  isCompleted 
-                                    ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-500" 
-                                    : isSelectedDay 
-                                      ? "bg-zinc-800/50 border-zinc-700 text-zinc-600 hover:border-emerald-500/50 hover:text-emerald-500/50" 
-                                      : "bg-transparent border-zinc-800/50 text-zinc-700 hover:border-zinc-600 hover:text-zinc-500"
-                                )}
-                              >
-                                {isCompleted && <Check className="w-5 h-5" />}
-                              </button>
-                            </div>
-                          );
-                        })}
+                          })
+                        )}
                       </div>
                     ))}
                   </div>

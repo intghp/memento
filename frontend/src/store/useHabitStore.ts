@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { api } from '../api/client';
 import { subDays, format } from 'date-fns';
-import type { Habit, HabitCreate, HabitLog } from '../types';
+import type { Habit, HabitCreate, HabitUpdate, HabitLog } from '../types';
 
 // ==========================================
 // INTERFACES E TIPAGENS
@@ -14,6 +14,8 @@ interface HabitState {
   fetchHabitsAndLogs: (date: string) => Promise<void>;
   addHabit: (habitData: HabitCreate) => Promise<void>;
   toggleHabit: (habitId: number, date: string) => Promise<void>;
+  updateHabit: (habitID: number, habitData: HabitUpdate) => Promise<void>;
+  deleteHabit: (habitID: number) => Promise<void>;
 }
 
 // ==========================================
@@ -66,6 +68,35 @@ export const useHabitStore = create<HabitState>((set, get) => ({
   // ATUALIZAÇÃO (UPDATE)
   // ==========================================
 
+  updateHabit: async (habitId, habitData) => {
+    try {
+      const response = await api.patch<Habit>(`/habits/${habitId}`, habitData);
+      set((state) => ({
+        habits: state.habits.map((habit) => 
+          habit.id === habitId ? response.data : habit
+        )
+      }));
+    } catch (error) {
+      console.error('Erro ao atualizar hábito:', error);
+    }
+  },
+
+  // ==========================================
+  // DELETAR (DELETE)
+  // ==========================================
+
+  deleteHabit: async (habitId) => {
+    try {
+      await api.delete(`/habits/${habitId}`);
+      // Remove o hábito apagado da tela instantaneamente
+      set((state) => ({
+        habits: state.habits.filter((habit) => habit.id !== habitId)
+      }));
+    } catch (error) {
+      console.error('Erro ao deletar hábito:', error);
+    }
+  },
+
   toggleHabit: async (habitId, date) => {
     const previousLogs = get().logs;
 
@@ -87,7 +118,7 @@ export const useHabitStore = create<HabitState>((set, get) => ({
         target_date: date,
         is_completed: true
       });
-    }
+    } 
 
     set({ logs: newLogs });
 

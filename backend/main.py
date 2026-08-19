@@ -10,7 +10,7 @@ from fastapi import FastAPI, Depends, HTTPException, Query
 from models import (
     Task, TaskCreate,
     Note, NoteCreate, NoteUpdate,
-    Habit, HabitCreate, HabitLog)
+    Habit, HabitCreate, HabitUpdate, HabitLog)
 
 # ==========================================
 # CONFIGURAÇÃO DA APLICAÇÃO (LIFESPAN E CORS)
@@ -211,3 +211,35 @@ async def toggle_habit(
     await session.commit()
     await session.refresh(log)
     return log
+
+# Editar um Hábito
+@app.patch("/api/habits/{habit_id}", response_model=Habit)
+async def update_habit(habit_id: int, habit_update: HabitUpdate, session: AsyncSession = Depends(get_session)):
+    db_habit = await session.get(Habit, habit_id)
+    if not db_habit:
+        raise HTTPException(status_code=404, detail="Habit not found")
+    
+    # Atualiza apenas os campos que foram enviados
+    habit_data = habit_update.model_dump(exclude_unset=True)
+    for key, value in habit_data.items():
+        setattr(db_habit, key, value)
+        
+    session.add(db_habit)
+    await session.commit()
+    await session.refresh(db_habit)
+    return db_habit
+
+# Deletar um Hábito
+@app.delete("/api/habits/{habit_id}")
+async def delete_habit(habit_id: int, session: AsyncSession = Depends(get_session)):
+    habit = await session.get(Habit, habit_id)
+    if not habit:
+        raise HTTPException(status_code=404, detail="Habit not found")
+        
+    logs = await session.exec(select(HabitLog).where(HabitLog.habit_id == habit_id))
+    for log in logs:
+        await session.delete(log)
+        
+    await session.delete(habit)
+    await session.commit()
+    return {"message": "Habit deleted successfully"}
