@@ -66,7 +66,7 @@ export default function App() {
         <div className="space-y-6 flex flex-col h-full">
           <header className="shrink-0">
             <h1 className="text-3xl font-bold tracking-tight">Memento</h1>
-            <p className="text-emerald-400 mt-1 font-medium">{selectedDate}</p>
+            <p className="text-zinc-400 mt-1 font-medium">{selectedDate}</p>
           </header>
           
           <div className="flex-1 overflow-hidden">

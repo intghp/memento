@@ -46,7 +46,7 @@ export function MiniCalendar() {
               "h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
               !isSameMonth(day, monthStart) && "text-zinc-700", // Dias do mês anterior/próximo
               isSameMonth(day, monthStart) && !isSameDay(day, selectedDateObj) && "text-zinc-300 hover:bg-zinc-800", // Dias normais
-              isSameDay(day, selectedDateObj) && "bg-emerald-500 text-zinc-950 hover:bg-emerald-400" // Dia selecionado
+              isSameDay(day, selectedDateObj) && "bg-zinc-200 text-zinc-900 font-bold shadow-[0_0_10px_rgba(228,228,231,0.15)]" // Dia selecionado
             )}
           >
             {formattedDate}
