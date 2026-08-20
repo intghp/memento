@@ -57,7 +57,7 @@ function SortableTaskItem({ task, onToggle }: { task: Task; onToggle: (id: numbe
         <GripVertical className="w-4 h-4" />
       </button>
       
-      <button onClick={() => onToggle(task.id)} className="text-zinc-500 hover:text-emerald-400 transition-colors shrink-0">
+      <button onClick={() => onToggle(task.id)} className="text-zinc-500 hover:text-zinc-200 transition-colors shrink-0">
         <Square className="w-5 h-5" />
       </button>
       
@@ -135,7 +135,7 @@ export function TaskList() {
 
         {/* INPUT DE NOVA TAREFA */}
         <form onSubmit={handleAddTask} className="mt-2 flex items-center gap-3 p-2 border-t border-zinc-800/50 shrink-0">
-          <Plus className="w-5 h-5 text-emerald-500/50" />
+          <Plus className="w-5 h-5 text-zinc-500" />
           <input
             type="text"
             value={newTaskTitle}
@@ -174,7 +174,7 @@ export function TaskList() {
           <div className="space-y-1 max-h-[150px] overflow-y-auto custom-scrollbar opacity-60">
             {completedTasks.map(task => (
               <div key={task.id} className="flex items-center gap-3 p-2 rounded-lg bg-zinc-900/10">
-                <button onClick={() => toggleTask(task.id)} className="text-emerald-500 hover:text-emerald-400 transition-colors">
+                <button onClick={() => toggleTask(task.id)} className="text-zinc-400 hover:text-zinc-300 transition-colors">
                   <CheckSquare className="w-5 h-5" />
                 </button>
                 <span className="text-sm text-zinc-500 line-through flex-1 break-words whitespace-normal">

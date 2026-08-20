@@ -158,7 +158,7 @@ export function HabitList() {
 
             <button 
               onClick={() => { closeForm(); setIsCreating(true); }}
-              className="flex items-center gap-2 text-sm bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-4 py-2 rounded-lg font-medium transition-colors"
+              className="flex items-center gap-2 text-sm bg-zinc-800 text-zinc-200 hover:bg-zinc-700 px-4 py-2 rounded-lg font-medium transition-colors"
             >
               <Plus className="w-4 h-4" />
               <span>Adicionar hábito</span>
@@ -236,7 +236,7 @@ export function HabitList() {
                         onClick={() => toggleDay(day.id)}
                         className={cn(
                           "w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center transition-all",
-                          isSelected ? "bg-emerald-500 text-zinc-950 shadow-lg shadow-emerald-500/20" : "bg-zinc-950 text-zinc-500 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-300"
+                          isSelected ? "bg-zinc-100 text-zinc-950 shadow-lg shadow-zinc-100/10" : "bg-zinc-950 text-zinc-500 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-300"
                         )}
                       >
                         {day.label}
@@ -253,7 +253,7 @@ export function HabitList() {
             <button 
               type="submit" 
               disabled={!newHabitName.trim()} 
-              className="bg-emerald-500 hover:bg-emerald-400 disabled:bg-zinc-800 disabled:text-zinc-600 text-zinc-950 px-6 py-2.5 rounded-lg font-bold transition-colors"
+              className="bg-zinc-100 hover:bg-white disabled:bg-zinc-800 disabled:text-zinc-600 text-zinc-950 px-6 py-2.5 rounded-lg font-bold transition-colors"
             >
               {editingHabitId ? 'Salvar Alterações' : 'Salvar Hábito'}
             </button>
@@ -305,7 +305,7 @@ export function HabitList() {
                           <span className="text-[10px] text-zinc-500 uppercase font-semibold">{SHORT_DAY_NAMES[day.dayOfWeek]}</span>
                           <span className={cn(
                             "text-sm font-bold mt-1",
-                            day.dateStr === selectedDate ? "text-emerald-400" : "text-zinc-400"
+                            day.dateStr === selectedDate ? "text-zinc-100" : "text-zinc-400"
                           )}>
                             {day.dayOfMonth}
                           </span>
@@ -330,7 +330,7 @@ export function HabitList() {
                           <div className="flex items-center gap-2 pr-2">
                             <button
                               onClick={() => openEditForm(habit)}
-                              className="p-2 text-zinc-500 hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors"
+                              className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
                               title="Editar"
                             >
                               <Pencil className="w-4 h-4" />
@@ -376,9 +376,9 @@ export function HabitList() {
                                   className={cn(
                                     "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 border",
                                     isCompleted 
-                                      ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-500" 
+                                      ? "bg-zinc-200 border-zinc-200 text-zinc-900 shadow-[0_0_10px_rgba(228,228,231,0.1)]" 
                                       : isSelectedDay 
-                                        ? "bg-zinc-800/50 border-zinc-700 text-zinc-600 hover:border-emerald-500/50 hover:text-emerald-500/50" 
+                                        ? "bg-zinc-800/50 border-zinc-700 text-zinc-600 hover:border-zinc-400 hover:text-zinc-400" 
                                         : "bg-transparent border-zinc-800/50 text-zinc-700 hover:border-zinc-600 hover:text-zinc-500"
                                   )}
                                 >
