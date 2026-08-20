@@ -142,7 +142,7 @@ export function HabitList() {
       {/* Header */}
       {/* ========================================== */}
       {!isCreating && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 mb-8">
             <button 
               onClick={() => setIsConfigMode(!isConfigMode)}
               className={cn(
