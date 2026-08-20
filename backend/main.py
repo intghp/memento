@@ -221,9 +221,10 @@ async def get_habit_logs(
 async def toggle_habit(
     habit_id: int,
     target_date: date = Query(..., description="A data em que o hábito foi feito"),
+    amount: Optional[float] = Query(None, description="Quantidade realizada (para hábitos quantitativos)"),
     session: AsyncSession = Depends(get_session)
 ):
-    # Marca ou desmarca a execução de um hábito num dia."
+    # Busca o histórico do dia e as configurações do hábito
     query = select(HabitLog).where(
         HabitLog.habit_id == habit_id, 
         HabitLog.target_date == target_date
@@ -231,13 +232,35 @@ async def toggle_habit(
     result = await session.exec(query)
     log = result.first()
     
+    habit = await session.get(Habit, habit_id)
+    if not habit:
+        raise HTTPException(status_code=404, detail="Habit not found")
+
     if log:
-        # Se já existia um registro, inverte o valor (Toggle)
-        log.is_completed = not log.is_completed
+        if habit.is_quantitative and amount is not None:
+            # Se for quantitativo, atualiza o valor e verifica se bateu a meta
+            log.amount_completed = amount
+            log.is_completed = amount >= (habit.goal_amount or 0)
+        else:
+            # Comportamento padrão (Toggle normal)
+            log.is_completed = not log.is_completed
+            # Se desmarcou, zera a quantidade
+            if not log.is_completed:
+                log.amount_completed = None
+                
         session.add(log)
     else:
-        # Se não existia, cria marcando como concluído
-        log = HabitLog(habit_id=habit_id, target_date=target_date, is_completed=True)
+        # Criando o check-in pela primeira vez no dia
+        is_completed = True
+        if habit.is_quantitative and amount is not None:
+            is_completed = amount >= (habit.goal_amount or 0)
+            
+        log = HabitLog(
+            habit_id=habit_id, 
+            target_date=target_date, 
+            is_completed=is_completed,
+            amount_completed=amount
+        )
         session.add(log)
         
     await session.commit()

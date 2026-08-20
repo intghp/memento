@@ -55,6 +55,10 @@ export interface Habit {
   specific_days?: string;
   shift: ShiftType
   created_at: string;
+
+  is_quantitative: boolean;
+  goal_amount?: number;
+  unit?: string;
 }
 
 export interface HabitCreate {
@@ -63,6 +67,10 @@ export interface HabitCreate {
   frequency: FrequencyType;
   specific_days?: string;
   shift: ShiftType;
+
+  is_quantitative: boolean;
+  goal_amount?: number;
+  unit?: string;
 }
 
 export interface HabitUpdate {
@@ -77,4 +85,6 @@ export interface HabitLog {
   habit_id: number;
   target_date: string;
   is_completed: boolean;
+
+  amount_completed?: number;
 }

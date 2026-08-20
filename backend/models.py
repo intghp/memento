@@ -56,12 +56,14 @@ class NoteUpdate(SQLModel):
 class HabitBase(SQLModel):
     name: str
     scheduled_time: time | None = None
-
     frequency: str = "daily"
-
     specific_days: str | None = None
-
     shift: str = "any"
+
+    # Quantitative Fields
+    is_quantitative: bool = False
+    goal_amount: float | None = None
+    unit: str | None = None
 
 class Habit(HabitBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -76,8 +78,15 @@ class HabitUpdate(SQLModel):
     specific_days: str | None = None
     shift: str | None = None
 
+    # Quantitative Fields
+    is_quantitative: bool = False
+    goal_amount: float | None = None
+    unit: str | None = None
+
 class HabitLog(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     habit_id: int = Field(foreign_key="habit.id")
     target_date: date
     is_completed: bool = False
+
+    amount_completed: float | None = None
