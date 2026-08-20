@@ -120,7 +120,7 @@ export function TaskList() {
       <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col mb-4">
         
         {pendingTasks.length === 0 && completedTasks.length === 0 ? (
-           <p className="text-zinc-600 text-xs text-center py-4">Sua lista está limpa.</p>
+           <p className="text-zinc-600 font-bold tracking-wider text-xs text-center py-4">Sua lista está limpa.</p>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis, restrictToParentElement]}>
             <div className="flex flex-col gap-1 relative">
@@ -166,7 +166,7 @@ export function TaskList() {
               }}
               className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-red-400 transition-colors"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 className="w-5 h-5" />
               <span>Limpar</span>
             </button>
           </div>
