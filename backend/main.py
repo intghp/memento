@@ -135,20 +135,8 @@ async def get_notes(
     # Busca a nota do dia. Se não existir, cria uma em branco automaticamente
     query = select(Note).where(Note.target_date == target_date)
     result = await session.exec(query)
-    note = result.first()
-
-    if not note:
-        # Para que o frontend sempre tenha um editor ativo
-        note = Note(
-            title=f"Nota de {target_date.strftime('%d/%m/%Y')}",
-            target_date=target_date
-        )
-
-        session.add(note)
-        await session.commit()
-        await session.refresh(note)
-
-    return note
+    
+    return result.first()
 
 # Cria uma nota manualmente
 @app.post("/api/notes", response_model=Note)
