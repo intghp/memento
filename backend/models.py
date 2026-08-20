@@ -15,6 +15,8 @@ class TaskBase(SQLModel):
     start_time: time | None = None
     end_time: time | None = None
 
+    position: int = 0
+
 class Task(TaskBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     created_at: datetime = Field(

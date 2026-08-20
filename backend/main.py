@@ -1,6 +1,7 @@
 from datetime import date
 from typing import Optional
 from sqlmodel import select
+from pydantic import BaseModel
 from database import get_session, init_db
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,7 +43,11 @@ async def health_check():
 # 1. TAREFAS (TASKS CRUD)
 # ==========================================
 
-# List Tasks
+class TaskReorder(BaseModel):
+    task_id: int
+    position: int
+
+# Rota para listar as tasks
 @app.get("/api/tasks", response_model=list[Task])
 async def get_tasks(
     session: AsyncSession = Depends(get_session),
@@ -50,11 +55,11 @@ async def get_tasks(
     ):
 
     # Filtrar apenas tarefas do dia selecionado
-    query = select(Task).where(Task.target_date == target_date)
+    query = select(Task).where(Task.target_date == target_date).order_by(Task.position)
     result = await session.exec(query)
     return result.all()
 
-# Create Task
+# Rota para criar a Task
 @app.post("/api/tasks", response_model=Task)
 async def create_task(task: TaskCreate, session: AsyncSession = Depends(get_session)):
     db_task = Task.model_validate(task)
@@ -78,7 +83,23 @@ async def toggle_task_completion(task_id: int, session: AsyncSession = Depends(g
 
     return task
 
-# Delete Task
+# Rota para excluir APENAS as tarefas concluídas do dia
+@app.delete("/api/tasks/completed")
+async def delete_completed_tasks(
+    target_date: date = Query(..., description="A data das tarefas"), 
+    session: AsyncSession = Depends(get_session)
+):
+    query = select(Task).where(Task.target_date == target_date, Task.is_completed == True)
+    result = await session.exec(query)
+    tasks = result.all()
+    
+    for task in tasks:
+        await session.delete(task)
+        
+    await session.commit()
+    return {"message": f"Deleted {len(tasks)} completed tasks"}
+
+# Rota para deletar a task
 @app.delete("/api/tasks/{task_id}")
 async def delete_task(task_id: int, session: AsyncSession = Depends(get_session)):
     task = await session.get(Task, task_id)
@@ -89,6 +110,17 @@ async def delete_task(task_id: int, session: AsyncSession = Depends(get_session)
     await session.commit()
 
     return {"message": "Task deleted successfully"}
+
+# Rota para salvar a nova ordem após o Drag and Drop
+@app.put("/api/tasks/reorder")
+async def reorder_tasks(reorders: list[TaskReorder], session: AsyncSession = Depends(get_session)):
+    for item in reorders:
+        task = await session.get(Task, item.task_id)
+        if task:
+            task.position = item.position
+            session.add(task)
+    await session.commit()
+    return {"message": "Tasks reordered"}
 
 # ==========================================
 # 2. NOTAS DIÁRIAS (DAILY NOTES)
