@@ -278,8 +278,11 @@ async def delete_habit(habit_id: int, session: AsyncSession = Depends(get_sessio
     habit = await session.get(Habit, habit_id)
     if not habit:
         raise HTTPException(status_code=404, detail="Habit not found")
-        
-    logs = await session.exec(select(HabitLog).where(HabitLog.habit_id == habit_id))
+
+    query = select(HabitLog).where(HabitLog.habit_id == habit_id)
+    result = await session.exec(query)
+    logs = result.all()
+
     for log in logs:
         await session.delete(log)
         
