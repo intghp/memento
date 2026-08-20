@@ -13,7 +13,7 @@ interface HabitState {
   isLoading: boolean;
   fetchHabitsAndLogs: (date: string) => Promise<void>;
   addHabit: (habitData: HabitCreate) => Promise<void>;
-  toggleHabit: (habitId: number, date: string) => Promise<void>;
+  toggleHabit: (habitId: number, date: string, amount?: number) => Promise<void>;
   updateHabit: (habitID: number, habitData: HabitUpdate) => Promise<void>;
   deleteHabit: (habitID: number) => Promise<void>;
 }
@@ -97,33 +97,55 @@ export const useHabitStore = create<HabitState>((set, get) => ({
     }
   },
 
-  toggleHabit: async (habitId, date) => {
+  // ==========================================
+  // Marcar (TOGGLE)
+  // ==========================================
+
+  toggleHabit: async (habitId, date, amount) => {
     const previousLogs = get().logs;
+    const habit = get().habits.find(h => h.id === habitId);
 
     const existingLogIndex = previousLogs.findIndex(
       (log) => log.habit_id === habitId && log.target_date === date
     );
 
     let newLogs = [...previousLogs];
+    let isCompletedOptimistic = true;
 
     if (existingLogIndex >= 0) {
+      if (amount === undefined) {
+        isCompletedOptimistic = !newLogs[existingLogIndex].is_completed;
+      } else if (habit?.is_quantitative) {
+        isCompletedOptimistic = amount >= (habit.goal_amount || 0);
+      }
+       
       newLogs[existingLogIndex] = {
         ...newLogs[existingLogIndex],
-        is_completed: !newLogs[existingLogIndex].is_completed
+        is_completed: isCompletedOptimistic,
+        amount_completed: amount !== undefined ? amount : (isCompletedOptimistic ? newLogs[existingLogIndex].amount_completed : undefined)
       };
     } else {
+      if (habit?.is_quantitative && amount !== undefined) {
+          isCompletedOptimistic = amount >= (habit.goal_amount || 0);
+      }
       newLogs.push({
         id: Date.now(),
         habit_id: habitId,
         target_date: date,
-        is_completed: true
+        is_completed: isCompletedOptimistic,
+        amount_completed: amount
       });
     } 
 
     set({ logs: newLogs });
 
     try {
-      const response = await api.post<HabitLog>(`/habits/${habitId}/toggle?target_date=${date}`);
+      // Monta a URL com ou sem o amount
+      const queryParams = new URLSearchParams({ target_date: date });
+      if (amount !== undefined) queryParams.append('amount', amount.toString());
+      
+      const response = await api.post<HabitLog>(`/habits/${habitId}/toggle?${queryParams.toString()}`);
+      
       set((state) => ({
         logs: state.logs.map((log) =>
           log.habit_id === habitId && log.target_date === date ? response.data : log

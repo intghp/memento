@@ -26,10 +26,10 @@ const SHORT_DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 // CONFIGURAÇÃO DOS TURNOS
 // ==========================================
 const SHIFTS = [
-  { id: 'morning', label: 'Manhã', icon: Sunrise, color: 'text-amber-400', bgHover: 'hover:bg-amber-400/10' },
-  { id: 'afternoon', label: 'Tarde', icon: Sun, color: 'text-orange-400', bgHover: 'hover:bg-orange-400/10' },
-  { id: 'night', label: 'Noite', icon: Moon, color: 'text-indigo-400', bgHover: 'hover:bg-indigo-400/10' },
-  { id: 'any', label: 'Qualquer Hora', icon: Maximize, color: 'text-zinc-400', bgHover: 'hover:bg-zinc-400/10' },
+  { id: 'morning', label: 'Manhã', icon: Sunrise },
+  { id: 'afternoon', label: 'Tarde', icon: Sun },
+  { id: 'night', label: 'Noite', icon: Moon },
+  { id: 'any', label: 'Qualquer Hora', icon: Maximize },
 ] as const;
 
 type ShiftType = 'morning' | 'afternoon' | 'night' | 'any';
@@ -58,6 +58,15 @@ export function HabitList() {
   const [selectedShift, setSelectedShift] = useState<ShiftType>('any');
 
   // ==========================================
+  // ESTADOS QUANTITATIVOS
+  // ==========================================
+  const [isQuantitative, setIsQuantitative] = useState(false);
+  const [goalAmount, setGoalAmount] = useState<string>('');
+  const [unit, setUnit] = useState<string>('');
+  
+  const [activeInput, setActiveInput] = useState<{ habitId: number, date: string, value: string } | null>(null);
+
+  // ==========================================
   // HANDLERS (AÇÕES DO USUÁRIO)
   // ==========================================
 
@@ -70,7 +79,10 @@ export function HabitList() {
       name: newHabitName,
       frequency: isDaily ? ('daily' as const) : ('specific_days' as const),
       specific_days: isDaily ? undefined : selectedDays.join(','),
-      shift: selectedShift
+      shift: selectedShift,
+      is_quantitative: isQuantitative,
+      goal_amount: isQuantitative && goalAmount ? parseFloat(goalAmount.replace(',', '.')) : undefined,
+      unit: isQuantitative ? unit : undefined
     };
     
     if (editingHabitId) {
@@ -91,8 +103,13 @@ export function HabitList() {
     } else {
       setSelectedDays(['0', '1', '2', '3', '4', '5', '6']);
     }
+    
+    setIsQuantitative(habit.is_quantitative || false);
+    setGoalAmount(habit.goal_amount ? habit.goal_amount.toString() : '');
+    setUnit(habit.unit || '');
+
     setIsCreating(true);
-    setIsConfigMode(false); // Fecha o modo configuração para mostrar o formulário
+    setIsConfigMode(false);
   };
 
   const closeForm = () => {
@@ -101,12 +118,25 @@ export function HabitList() {
     setNewHabitName('');
     setSelectedDays(['0', '1', '2', '3', '4', '5', '6']);
     setSelectedShift('any');
+    setIsQuantitative(false);
+    setGoalAmount('');
+    setUnit('');
   };
 
   const toggleDay = (id: string) => {
     setSelectedDays(prev => 
       prev.includes(id) ? prev.filter(d => d !== id) : [...prev, id]
     );
+  };
+
+  // Handler Inteligente e Seguro para clique na bolinha
+  const handleToggleHabitClick = (habit: Habit, dateStr: string, isAlreadyCompleted: boolean, currentAmount?: number) => {
+    if (habit.is_quantitative && !isAlreadyCompleted) {
+      // Abre o input pré-preenchido com o valor parcial (caso exista)
+      setActiveInput({ habitId: habit.id, date: dateStr, value: currentAmount ? currentAmount.toString() : '' });
+    } else {
+      toggleHabit(habit.id, dateStr);
+    }
   };
 
   // GERAÇÃO DA GRADE (Histórico de 7 Dias)
@@ -125,7 +155,7 @@ export function HabitList() {
   // AGRUPAMENTO DE HÁBITOS POR TURNO
   // ==========================================
   const groupedHabits = habits.reduce((acc, habit) => {
-    const shift = habit.shift || 'any'; // Proteção contra dados antigos no banco
+    const shift = habit.shift || 'any';
     if (!acc[shift]) acc[shift] = [];
     acc[shift].push(habit);
     return acc;
@@ -136,7 +166,7 @@ export function HabitList() {
   // ==========================================
 
   return (
-    <div className="flex flex-col h-full bg-zinc-900/20 rounded-2xl border border-zinc-800/50 p-6">
+    <div className="flex flex-col h-full bg-white dark:bg-zinc-900/20 rounded-2xl border border-zinc-200 dark:border-zinc-800/50 p-6 transition-colors duration-300 shadow-sm dark:shadow-none">
       
       {/* ========================================== */}
       {/* Header */}
@@ -146,10 +176,10 @@ export function HabitList() {
             <button 
               onClick={() => setIsConfigMode(!isConfigMode)}
               className={cn(
-                "p-2 rounded-lg transition-colors border",
+                "p-2 rounded-lg transition-colors duration-300 border",
                 isConfigMode 
-                  ? "bg-zinc-800 text-zinc-200 border-zinc-700" 
-                  : "bg-transparent text-zinc-500 border-transparent hover:bg-zinc-800/50 hover:text-zinc-300"
+                  ? "bg-zinc-200 border-zinc-300 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 dark:border-zinc-700" 
+                  : "bg-transparent text-zinc-500 border-transparent hover:bg-zinc-100 hover:text-zinc-700 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-300"
               )}
               title="Configurar Hábitos"
             >
@@ -158,7 +188,7 @@ export function HabitList() {
 
             <button 
               onClick={() => { closeForm(); setIsCreating(true); }}
-              className="flex items-center gap-2 text-sm bg-zinc-800 text-zinc-200 hover:bg-zinc-700 px-4 py-2 rounded-lg font-medium transition-colors"
+              className="flex items-center gap-2 text-sm bg-zinc-900 text-zinc-100 hover:bg-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 px-4 py-2 rounded-lg font-medium transition-colors duration-300"
             >
               <Plus className="w-4 h-4" />
               <span>Adicionar hábito</span>
@@ -167,14 +197,14 @@ export function HabitList() {
         )}
 
       {/* ========================================== */}
-      {/* Formulário de Criação (MODO EXPANDIDO*/}
+      {/* Formulário de Criação (MODO EXPANDIDO) */}
       {/* ========================================== */}
       {isCreating && (
-        <form onSubmit={handleSaveHabit} className="mb-8 bg-zinc-900 rounded-xl border border-zinc-800 p-5 relative shadow-xl">
+        <form onSubmit={handleSaveHabit} className="mb-8 bg-zinc-50 dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-5 relative shadow-lg dark:shadow-xl transition-colors duration-300">
           <button 
             type="button" 
             onClick={closeForm}
-            className="absolute top-4 right-4 text-zinc-500 hover:text-zinc-300"
+            className="absolute top-4 right-4 text-zinc-400 hover:text-zinc-600 dark:text-zinc-500 dark:hover:text-zinc-300 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -186,18 +216,61 @@ export function HabitList() {
                 type="text"
                 value={newHabitName}
                 onChange={(e) => setNewHabitName(e.target.value)}
-                placeholder="Novo hábito..."
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-emerald-500 transition-colors"
+                placeholder="Ex: Beber Água..."
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-300 dark:border-zinc-800 rounded-lg px-4 py-2.5 text-zinc-900 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-500 transition-colors duration-300"
                 autoFocus
                 disabled={isLoading}
               />
             </div>
+
+            <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800/50 transition-colors duration-300">
+              <div className="flex items-center gap-3 mb-2">
+                <button
+                  type="button"
+                  onClick={() => setIsQuantitative(!isQuantitative)}
+                  className={cn(
+                    "w-10 h-5 rounded-full relative transition-colors duration-300",
+                    isQuantitative ? "bg-zinc-900 dark:bg-zinc-200" : "bg-zinc-300 dark:bg-zinc-700"
+                  )}
+                >
+                  <div className={cn(
+                    "w-3.5 h-3.5 rounded-full bg-white dark:bg-zinc-900 absolute top-[3px] transition-all duration-300",
+                    isQuantitative ? "left-[22px]" : "left-1"
+                  )} />
+                </button>
+                <label className="text-xs font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer" onClick={() => setIsQuantitative(!isQuantitative)}>
+                  Definir Meta Quantitativa
+                </label>
+              </div>
+
+              {isQuantitative && (
+                <div className="grid grid-cols-2 gap-4 mt-4 p-4 bg-white/50 dark:bg-zinc-950/50 rounded-lg border border-zinc-200 dark:border-zinc-800/50 transition-colors duration-300">
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-500 mb-2">Meta Diária (Apenas números)</label>
+                    <input 
+                      type="number" 
+                      step="0.1"
+                      value={goalAmount} 
+                      onChange={e => setGoalAmount(e.target.value)} 
+                      placeholder="Ex: 2.5" 
+                      className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-900 dark:text-zinc-200 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-500 transition-colors duration-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-zinc-500 mb-2">Unidade (Opcional)</label>
+                    <input 
+                      type="text" 
+                      value={unit} 
+                      onChange={e => setUnit(e.target.value)} 
+                      placeholder="Ex: L, km, pág..." 
+                      className="w-full bg-white dark:bg-zinc-900 border border-zinc-300 dark:border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-900 dark:text-zinc-200 focus:outline-none focus:border-zinc-900 dark:focus:border-zinc-500 transition-colors duration-300"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              
-              {/* ========================================== */}
-              {/* SELETOR DE TURNOS NO FORMULÁRIO */}
-              {/* ========================================== */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-zinc-200 dark:border-zinc-800/50 transition-colors duration-300">
               <div>
                 <label className="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">Turno (Período)</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -210,13 +283,13 @@ export function HabitList() {
                         type="button"
                         onClick={() => setSelectedShift(shift.id as ShiftType)}
                         className={cn(
-                          "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-all",
+                          "flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors duration-300",
                           isSelected 
-                            ? "bg-zinc-800 border-zinc-700 text-zinc-200" 
-                            : "bg-zinc-950 border-zinc-800/50 text-zinc-500 hover:bg-zinc-900"
+                            ? "bg-zinc-900 border-zinc-900 text-white dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-200" 
+                            : "bg-zinc-100 border-zinc-200 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-950 dark:border-zinc-800/50 dark:text-zinc-500 dark:hover:bg-zinc-900"
                         )}
                       >
-                        <Icon className={cn("w-4 h-4", isSelected ? shift.color : "text-zinc-600")} />
+                        <Icon className={cn("w-4 h-4", isSelected ? "text-current" : "text-zinc-400 dark:text-zinc-600")} />
                         {shift.label}
                       </button>
                     )
@@ -235,8 +308,10 @@ export function HabitList() {
                         type="button"
                         onClick={() => toggleDay(day.id)}
                         className={cn(
-                          "w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center transition-all",
-                          isSelected ? "bg-zinc-100 text-zinc-950 shadow-lg shadow-zinc-100/10" : "bg-zinc-950 text-zinc-500 border border-zinc-800 hover:bg-zinc-800 hover:text-zinc-300"
+                          "w-10 h-10 rounded-lg text-sm font-bold flex items-center justify-center transition-all duration-300",
+                          isSelected 
+                            ? "bg-zinc-900 text-white shadow-md dark:bg-zinc-100 dark:text-zinc-950 dark:shadow-zinc-100/10" 
+                            : "bg-white dark:bg-zinc-950 text-zinc-500 border border-zinc-300 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-700 dark:hover:text-zinc-300"
                         )}
                       >
                         {day.label}
@@ -249,11 +324,11 @@ export function HabitList() {
             </div>
           </div>
           
-          <div className="mt-6 flex justify-end pt-4 border-t border-zinc-800/50">
+          <div className="mt-6 flex justify-end pt-4 border-t border-zinc-200 dark:border-zinc-800/50 transition-colors duration-300">
             <button 
               type="submit" 
               disabled={!newHabitName.trim()} 
-              className="bg-zinc-100 hover:bg-white disabled:bg-zinc-800 disabled:text-zinc-600 text-zinc-950 px-6 py-2.5 rounded-lg font-bold transition-colors"
+              className="bg-zinc-900 text-white hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-400 dark:bg-zinc-100 dark:text-zinc-950 dark:hover:bg-white dark:disabled:bg-zinc-800 dark:disabled:text-zinc-600 px-6 py-2.5 rounded-lg font-bold transition-colors duration-300"
             >
               {editingHabitId ? 'Salvar Alterações' : 'Salvar Hábito'}
             </button>
@@ -266,9 +341,9 @@ export function HabitList() {
         "flex-1 overflow-auto custom-scrollbar transition-all duration-300",
         isLoading ? "opacity-40 pointer-events-none" : "opacity-100"
       )}>
-        {habits.length === 0 && !isLoading ? (
-          <div className="text-center py-20 border-2 border-dashed border-zinc-800/50 rounded-2xl">
-            <p className="text-zinc-600 text-sm">Nenhum hábito cadastrado.</p>
+        {habits.length === 0 ? (
+          <div className="text-center py-20 border-2 border-dashed border-zinc-300 dark:border-zinc-800/50 rounded-2xl transition-colors duration-300">
+            <p className="text-zinc-500 text-sm">Nenhum hábito cadastrado.</p>
           </div>
         ) : (
           <div className="min-w-[600px] space-y-8">
@@ -287,25 +362,26 @@ export function HabitList() {
               return (
                 <div key={shiftConfig.id} className="space-y-3">
                   
-                  {/* CABEÇALHO DA TABELA (Agora mostra o nome do Turno em vez de "Hábito") */}
+                  {/* CABEÇALHO DA TABELA */}
                   <div className="grid grid-cols-[minmax(200px,1fr)_repeat(7,minmax(48px,1fr))] gap-4 px-4 items-end">
                     <div className="flex items-center gap-2 pb-2">
-                      <Icon className={cn("w-5 h-5", shiftConfig.color)} />
-                      <h3 className="font-semibold text-zinc-300">{shiftConfig.label}</h3>
+                      <Icon className="w-5 h-5 text-zinc-800 dark:text-zinc-400 transition-colors duration-300" />
+                      <h3 className="font-semibold text-zinc-900 dark:text-zinc-300 transition-colors duration-300">{shiftConfig.label}</h3>
                     </div>
                     
                     {/* MODO DE CONFIGURAÇÃO */}
                     {isConfigMode ? (
-                       <div className="col-span-7 flex justify-end pb-8 opacity-60 pr-2">
-                         <span className="text-[10px] text-zinc-500 uppercase font-semibold tracking-wider">Ações</span>
-                       </div>
+                        <div className="col-span-7 flex justify-end pb-2 opacity-60 pr-2">
+                          <span className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Ações</span>
+                        </div>
                     ) : (
-                      last7Days.map((day) => (
-                        <div key={day.dateStr} className="flex flex-col items-center justify-end pb-2 opacity-60">
+                      // 1ª CORREÇÃO: Usar o INDEX (i) como key em vez do dateStr
+                      last7Days.map((day, i) => (
+                        <div key={i} className="flex flex-col items-center justify-end pb-2 opacity-60 transition-colors duration-300">
                           <span className="text-[10px] text-zinc-500 uppercase font-semibold">{SHORT_DAY_NAMES[day.dayOfWeek]}</span>
                           <span className={cn(
-                            "text-sm font-bold mt-1",
-                            day.dateStr === selectedDate ? "text-zinc-100" : "text-zinc-400"
+                            "text-sm font-bold mt-1 transition-colors duration-300",
+                            day.dateStr === selectedDate ? "text-zinc-900 dark:text-zinc-100" : "text-zinc-400 dark:text-zinc-500"
                           )}>
                             {day.dayOfMonth}
                           </span>
@@ -317,46 +393,40 @@ export function HabitList() {
                   <div className="space-y-2">
                     {shiftHabits.map((habit) => (
                       <div key={habit.id} className={cn(
-                        "grid gap-4 px-4 py-3 bg-zinc-900/40 hover:bg-zinc-900/80 rounded-xl border border-zinc-800/30 transition-colors items-center group",
+                        "grid gap-4 px-4 py-3 bg-zinc-50/50 hover:bg-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-900/80 rounded-xl border border-zinc-200 dark:border-zinc-800/30 transition-colors duration-300 items-center group",
                         isConfigMode ? "grid-cols-[1fr_auto]" : "grid-cols-[minmax(200px,1fr)_repeat(7,minmax(48px,1fr))]"
                       )}>
                         
-                        <div className="font-medium text-zinc-200 truncate pr-4 pl-7">
-                          {habit.name}
+                        <div className="flex flex-col pr-4 pl-7 transition-colors duration-300">
+                          <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate">{habit.name}</span>
+                          {habit.is_quantitative && (
+                            <span className="text-xs text-zinc-500 dark:text-zinc-400 uppercase font-semibold mt-1">
+                              Meta: {habit.goal_amount} {habit.unit}
+                            </span>
+                          )}
                         </div>
 
                         {/* MODO DE CONFIGURAÇÃO (Botões Editar / Excluir) */}
                         {isConfigMode ? (
-                          <div className="flex items-center gap-2 pr-2">
-                            <button
-                              onClick={() => openEditForm(habit)}
-                              className="p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
-                              title="Editar"
-                            >
+                          <div className="flex items-center justify-end gap-2 pr-2">
+                            <button onClick={() => openEditForm(habit)} className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200 dark:text-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors duration-300" title="Editar">
                               <Pencil className="w-4 h-4" />
                             </button>
-                            <button
-                              onClick={() => {
-                                if(window.confirm('Tem certeza que deseja excluir este hábito e todo o seu histórico?')) {
-                                  deleteHabit(habit.id);
-                                }
-                              }}
-                              className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
-                              title="Excluir"
-                            >
+                            <button onClick={() => { if(window.confirm('Tem certeza que deseja excluir este hábito e todo o seu histórico?')) deleteHabit(habit.id); }} className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-100 dark:text-zinc-500 dark:hover:text-red-400 dark:hover:bg-red-400/10 rounded-lg transition-colors duration-300" title="Excluir">
                               <Trash2 className="w-4 h-4" />
                             </button>
                           </div>
                         ) : (
                           // MODO NORMAL: O Mini-Heatmap dos últimos 7 dias 
-                          last7Days.map((day) => {
-                            // Lógica de Filtro dos Hábitos do Dia
+                          // 2ª CORREÇÃO: Usar o INDEX (i) como key em vez do dateStr
+                          last7Days.map((day, i) => {
                             const isActiveThisDay = habit.frequency === 'daily' || habit.specific_days?.includes(day.dayOfWeek.toString());
                             
                             if (!isActiveThisDay) {
                               return (
-                                <div key={day.dateStr} className="flex justify-center">
-                                  <span className="text-zinc-800 text-lg leading-none">-</span>
+                                // 3ª CORREÇÃO: Usar o INDEX (i) aqui também
+                                <div key={i} className="flex justify-center">
+                                  <span className="text-zinc-300 dark:text-zinc-800 text-lg leading-none transition-colors duration-300">-</span>
                                 </div>
                               );
                             }
@@ -367,23 +437,75 @@ export function HabitList() {
                             
                             // Destaca visualmente qual dia é "hoje" na grade
                             const isSelectedDay = day.dateStr === selectedDate;
+                            const isEditingQuantitative = activeInput?.habitId === habit.id && activeInput?.date === day.dateStr;
+
+                            const formatAmount = (val: number) => {
+                              if (val >= 1000) return (val / 1000).toFixed(val % 1000 === 0 ? 0 : 1) + 'k';
+                              return Number.isInteger(val) ? val : Number(val).toFixed(1);
+                            };
 
                             return (
-                              <div key={day.dateStr} className="flex justify-center">
-                                <button
-                                  title={day.dateStr} // Mostra a data se o mouse passar por cima
-                                  onClick={() => toggleHabit(habit.id, day.dateStr)}
-                                  className={cn(
-                                    "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 border",
-                                    isCompleted 
-                                      ? "bg-zinc-200 border-zinc-200 text-zinc-900 shadow-[0_0_10px_rgba(228,228,231,0.1)]" 
-                                      : isSelectedDay 
-                                        ? "bg-zinc-800/50 border-zinc-700 text-zinc-600 hover:border-zinc-400 hover:text-zinc-400" 
-                                        : "bg-transparent border-zinc-800/50 text-zinc-700 hover:border-zinc-600 hover:text-zinc-500"
-                                  )}
-                                >
-                                  {isCompleted && <Check className="w-5 h-5" />}
-                                </button>
+                              // 4ª CORREÇÃO: Usar o INDEX (i) como key principal da célula
+                              <div key={i} className="flex justify-center relative group/btn">
+                                
+                                {isEditingQuantitative ? (
+                                  <input
+                                    autoFocus
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={activeInput.value}
+                                    onChange={(e) => {
+                                      const val = e.target.value.replace(/[^0-9.,]/g, '');
+                                      setActiveInput({ ...activeInput, value: val });
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') e.currentTarget.blur();
+                                      if (e.key === 'Escape') {
+                                        e.currentTarget.value = '';
+                                        e.currentTarget.blur();
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      const val = e.target.value.trim();
+                                      if (val !== '') {
+                                        const amount = parseFloat(val.replace(',', '.'));
+                                        if (!isNaN(amount)) toggleHabit(habit.id, day.dateStr, amount);
+                                      }
+                                      setActiveInput(null);
+                                    }}
+                                    className="w-12 h-8 rounded-lg bg-transparent border-2 border-zinc-400 dark:border-zinc-500 text-zinc-900 dark:text-zinc-100 text-xs font-bold text-center focus:outline-none z-10"
+                                  />
+                                ) : (
+                                  <button
+                                    onClick={() => handleToggleHabitClick(habit, day.dateStr, isCompleted, log?.amount_completed)}
+                                    className={cn(
+                                      "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 border overflow-hidden",
+                                      isCompleted 
+                                        ? "bg-zinc-900 border-zinc-900 text-white shadow-sm dark:bg-zinc-200 dark:border-zinc-200 dark:text-zinc-900 dark:shadow-[0_0_10px_rgba(228,228,231,0.1)]" 
+                                        : isSelectedDay 
+                                          ? "bg-zinc-100 border-zinc-300 text-zinc-400 hover:border-zinc-900 hover:text-zinc-900 dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-600 dark:hover:border-zinc-400 dark:hover:text-zinc-400" 
+                                          : "bg-transparent border-zinc-200 text-zinc-300 hover:border-zinc-400 hover:text-zinc-500 dark:border-zinc-800/50 dark:text-zinc-700 dark:hover:border-zinc-600 dark:hover:text-zinc-500"
+                                    )}
+                                  >
+                                    {isCompleted ? <Check className="w-5 h-5 shrink-0" /> : (
+                                      habit.is_quantitative && log?.amount_completed !== undefined ? (
+                                        <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 truncate max-w-full px-1">
+                                          {formatAmount(log.amount_completed)}
+                                        </span>
+                                      ) : (
+                                        habit.is_quantitative && isSelectedDay && !isCompleted && (
+                                          <span className="text-[10px] font-bold opacity-30 shrink-0">+</span>
+                                        )
+                                      )
+                                    )}
+                                  </button>
+                                )}
+                                
+                                {habit.is_quantitative && log?.amount_completed !== undefined && !isEditingQuantitative && (
+                                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold py-1 px-2 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none truncate max-w-[100px] z-50 shadow-xl">
+                                    {formatAmount(log.amount_completed)} / {habit.goal_amount} {habit.unit}
+                                  </div>
+                                )}
                               </div>
                             );
                           })
