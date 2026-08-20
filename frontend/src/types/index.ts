@@ -16,6 +16,7 @@ export interface Task {
   start_time?: string; // Formato HH:MM:SS
   end_time?: string;   // Formato HH:MM:SS
   created_at: string;
+  position: number;
 }
 
 export interface TaskCreate {
@@ -24,6 +25,7 @@ export interface TaskCreate {
   target_date: string;
   start_time?: string;
   end_time?: string;
+  position?: number;
 }
 
 // ==========================================
