@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Sun, Moon } from 'lucide-react';
 import { MainLayout } from './components/layout/MainLayout';
 import { useDateStore } from './store/useDateStore';
 import { useTaskStore } from './store/useTaskStore';
@@ -16,13 +17,24 @@ import { HabitList } from './components/habits/HabitList';
 export default function App() {
 
   // ==========================================
-  // ESTADO GLOBAL (ZUSTAND STORES)
+  // ESTADO GLOBAL (ZUSTAND STORES E TEMA)
   // ==========================================
+
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
   const { selectedDate } = useDateStore();
   const { fetchTasks } = useTaskStore();
   const { fetchDailyNote } = useNoteStore();
   const { fetchHabitsAndLogs } = useHabitStore();
+
+  // Efeito que injeta ou remove a classe 'dark' no HTML principal
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   // Atualiza TUDO quando você troca de dia no calendário!
   useEffect(() => {
@@ -47,7 +59,7 @@ export default function App() {
           <MiniCalendar />
           
           <div className="border-t border-zinc-800/50 pt-6 flex-1 flex flex-col overflow-hidden">
-            <h3 className="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4 shrink-0">
+            <h3 className="text-sm font-semibold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider mb-4 shrink-0 transition-colors duration-300">
               Tarefas Pontuais
             </h3>
             
@@ -64,9 +76,24 @@ export default function App() {
 
       main={
         <div className="space-y-6 flex flex-col h-full">
-          <header className="shrink-0">
-            <h1 className="text-3xl font-bold tracking-tight">Memento</h1>
-            <p className="text-zinc-400 mt-1 font-medium">{selectedDate}</p>
+          <header className="shrink-0 flex justify-between items-end">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 transition-colors duration-300">
+                Memento
+              </h1>
+              <p className="text-zinc-500 dark:text-zinc-400 mt-1 font-medium transition-colors duration-300">
+                {selectedDate}
+              </p>
+            </div>
+            
+            {/* BOTÃO DE SWITCH DE TEMA (CLARO/ESCURO) */}
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="p-2.5 rounded-xl bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-300 dark:hover:bg-zinc-700 transition-all duration-300"
+              title="Alternar Tema"
+            >
+              {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
           </header>
           
           <div className="flex-1 overflow-hidden">

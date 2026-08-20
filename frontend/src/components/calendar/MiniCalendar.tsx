@@ -43,10 +43,16 @@ export function MiniCalendar() {
             key={day.toString()}
             onClick={() => setSelectedDate(dateString)}
             className={cn(
-              "h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
-              !isSameMonth(day, monthStart) && "text-zinc-700", // Dias do mês anterior/próximo
-              isSameMonth(day, monthStart) && !isSameDay(day, selectedDateObj) && "text-zinc-300 hover:bg-zinc-800", // Dias normais
-              isSameDay(day, selectedDateObj) && "bg-zinc-200 text-zinc-900 font-bold shadow-[0_0_10px_rgba(228,228,231,0.15)]" // Dia selecionado
+              "h-8 w-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors duration-300",
+              
+              // Dias do mês anterior/próximo
+              !isSameMonth(day, monthStart) && "text-zinc-300 dark:text-zinc-700", 
+              
+              // Dias normais do mês atual
+              isSameMonth(day, monthStart) && !isSameDay(day, selectedDateObj) && "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800", 
+              
+              // Dia selecionado (Invertido: Preto no claro, Branco no escuro)
+              isSameDay(day, selectedDateObj) && "bg-zinc-900 text-white dark:bg-zinc-200 dark:text-zinc-900 font-bold shadow-md dark:shadow-[0_0_10px_rgba(228,228,231,0.15)]" 
             )}
           >
             {formattedDate}
@@ -61,17 +67,19 @@ export function MiniCalendar() {
   };
 
   return (
-    <div className="w-full bg-zinc-900/30 border border-zinc-800/50 rounded-xl p-4">
+    // Fundo e borda do Container
+    <div className="w-full bg-white dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/50 rounded-xl p-4 transition-colors duration-300 shadow-sm dark:shadow-none">
+      
       {/* Cabeçalho do Calendário (Mês e Setas) */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-zinc-200 font-semibold capitalize">
+        <h2 className="text-zinc-900 dark:text-zinc-200 font-semibold capitalize transition-colors duration-300">
           {format(currentMonth, 'MMMM yyyy', { locale: ptBR })}
         </h2>
         <div className="flex gap-2">
-          <button onClick={prevMonth} className="p-1 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-md transition-colors">
+          <button onClick={prevMonth} className="p-1 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors duration-300">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <button onClick={nextMonth} className="p-1 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-md transition-colors">
+          <button onClick={nextMonth} className="p-1 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-md transition-colors duration-300">
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
@@ -80,7 +88,7 @@ export function MiniCalendar() {
       {/* Dias da Semana (Dom, Seg, Ter...) */}
       <div className="grid grid-cols-7 gap-1 mb-2 text-center">
         {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((dia, index) => (
-          <div key={index} className="text-xs font-semibold text-zinc-500">
+          <div key={index} className="text-xs font-semibold text-zinc-500 transition-colors duration-300">
             {dia}
           </div>
         ))}

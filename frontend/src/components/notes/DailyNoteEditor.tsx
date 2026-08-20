@@ -30,17 +30,17 @@ export function DailyNoteEditor() {
 
   return (
     <div className={cn(
-      "flex flex-col h-full bg-zinc-900/30 border border-zinc-800/50 rounded-2xl overflow-hidden shadow-sm transition-all duration-300",
+      "flex flex-col h-full bg-white dark:bg-zinc-900/30 border border-zinc-200 dark:border-zinc-800/50 rounded-2xl overflow-hidden shadow-sm dark:shadow-none transition-all duration-300",
       isLoading ? "opacity-40 pointer-events-none" : "opacity-100"
     )}>
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between p-4 border-b border-zinc-800/50 bg-zinc-900/80">
-        <h2 className="text-sm font-semibold text-zinc-300">
+      <div className="flex items-center justify-between p-4 border-b border-zinc-200 dark:border-zinc-800/50 bg-zinc-50 dark:bg-zinc-900/80 transition-colors duration-300">
+        <h2 className="text-sm font-semibold text-zinc-800 dark:text-zinc-300 transition-colors duration-300">
           {activeNote?.title || 'Nota Diária'}
         </h2>
         <button
           onClick={() => setIsEditing(!isEditing)}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors text-xs font-medium"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-zinc-300 transition-colors duration-300 text-xs font-medium"
         >
           {isEditing ? <><Eye className="w-4 h-4" /> Visualizar</> : <><Edit3 className="w-4 h-4" /> Editar</>}
         </button>
@@ -53,10 +53,10 @@ export function DailyNoteEditor() {
             value={noteContent}
             onChange={(e) => setNoteContent(e.target.value)}
             placeholder="Registre as ideias de hoje em Markdown..."
-            className="w-full h-full bg-transparent resize-none text-zinc-300 focus:outline-none leading-relaxed"
+            className="w-full h-full bg-transparent resize-none text-zinc-800 dark:text-zinc-300 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none leading-relaxed transition-colors duration-300"
           />
         ) : (
-          <div className="prose prose-invert prose-emerald max-w-none">
+          <div className="prose prose-zinc dark:prose-invert max-w-none transition-colors duration-300">
             <ReactMarkdown>{noteContent || '*Nenhuma anotação neste dia.*'}</ReactMarkdown>
           </div>
         )}

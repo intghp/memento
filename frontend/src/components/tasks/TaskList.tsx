@@ -44,24 +44,26 @@ function SortableTaskItem({ task, onToggle }: { task: Task; onToggle: (id: numbe
       ref={setNodeRef} 
       style={style} 
       className={cn(
-        "group flex items-center gap-3 p-2 rounded-lg transition-colors border",
-        isDragging ? "bg-zinc-800 border-zinc-700 opacity-90 shadow-xl" : "bg-zinc-900/30 border-transparent hover:bg-zinc-800/50"
+        "group flex items-center gap-3 p-2 rounded-lg transition-colors duration-300 border",
+        isDragging 
+          ? "bg-white border-zinc-300 dark:bg-zinc-800 dark:border-zinc-700 opacity-90 shadow-xl" 
+          : "bg-zinc-100/50 dark:bg-zinc-900/30 border-transparent hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50"
       )}
     >
       <button 
         {...attributes} 
         {...listeners} 
-        className="cursor-grab active:cursor-grabbing text-zinc-600 hover:text-zinc-400 p-1 shrink-0"
+        className="cursor-grab active:cursor-grabbing text-zinc-400 hover:text-zinc-600 dark:text-zinc-600 dark:hover:text-zinc-400 p-1 shrink-0 transition-colors"
         title="Arrastar para reordenar"
       >
         <GripVertical className="w-4 h-4" />
       </button>
       
-      <button onClick={() => onToggle(task.id)} className="text-zinc-500 hover:text-zinc-200 transition-colors shrink-0">
+      <button onClick={() => onToggle(task.id)} className="text-zinc-400 hover:text-zinc-800 dark:text-zinc-500 dark:hover:text-zinc-200 transition-colors shrink-0">
         <Square className="w-5 h-5" />
       </button>
       
-      <span className="text-sm font-medium text-zinc-200 flex-1 break-words whitespace-normal">
+      <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200 flex-1 break-words whitespace-normal transition-colors duration-300">
         {task.title}
       </span>
     </div>
@@ -120,7 +122,7 @@ export function TaskList() {
       <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col mb-4">
         
         {pendingTasks.length === 0 && completedTasks.length === 0 ? (
-           <p className="text-zinc-600 text-xs text-center py-4">Sua lista está limpa.</p>
+           <p className="text-zinc-500 dark:text-zinc-600 text-xs text-center py-4 transition-colors duration-300">Sua lista está limpa.</p>
         ) : (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd} modifiers={[restrictToVerticalAxis, restrictToParentElement]}>
             <div className="flex flex-col gap-1 relative">
@@ -134,14 +136,14 @@ export function TaskList() {
         )}
 
         {/* INPUT DE NOVA TAREFA */}
-        <form onSubmit={handleAddTask} className="mt-2 flex items-center gap-3 p-2 border-t border-zinc-800/50 shrink-0">
-          <Plus className="w-5 h-5 text-zinc-500" />
+        <form onSubmit={handleAddTask} className="mt-2 flex items-center gap-3 p-2 border-t border-zinc-200 dark:border-zinc-800/50 shrink-0 transition-colors duration-300">
+          <Plus className="w-5 h-5 text-zinc-400 dark:text-zinc-500 transition-colors" />
           <input
             type="text"
             value={newTaskTitle}
             onChange={(e) => setNewTaskTitle(e.target.value)}
             placeholder="Adicionar tarefa..."
-            className="flex-1 bg-transparent text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none"
+            className="flex-1 bg-transparent text-sm text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-600 focus:outline-none transition-colors duration-300"
             disabled={isLoading}
           />
         </form>
@@ -151,10 +153,10 @@ export function TaskList() {
       {/* TAREFAS CONCLUÍDAS (Separadas e com opção de limpar) */}
       {/* ========================================== */}
       {completedTasks.length > 0 && (
-        <div className="shrink-0 border-t border-zinc-800/50 pt-4 pb-2">
+        <div className="shrink-0 border-t border-zinc-200 dark:border-zinc-800/50 pt-4 pb-2 transition-colors duration-300">
           
           <div className="flex items-center justify-between mb-3 px-2">
-            <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-zinc-500 uppercase tracking-wider transition-colors duration-300">
               Concluídas ({completedTasks.length})
             </span>
             {/* Botão de limpar concluídas */}
@@ -164,7 +166,7 @@ export function TaskList() {
                   clearCompletedTasks(selectedDate);
                 }
               }}
-              className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-red-400 transition-colors"
+              className="flex items-center gap-1 text-[10px] text-zinc-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
             >
               <Trash2 className="w-3 h-3" />
               <span>Limpar</span>
@@ -173,11 +175,11 @@ export function TaskList() {
 
           <div className="space-y-1 max-h-[150px] overflow-y-auto custom-scrollbar opacity-60">
             {completedTasks.map(task => (
-              <div key={task.id} className="flex items-center gap-3 p-2 rounded-lg bg-zinc-900/10">
-                <button onClick={() => toggleTask(task.id)} className="text-zinc-400 hover:text-zinc-300 transition-colors">
+              <div key={task.id} className="flex items-center gap-3 p-2 rounded-lg bg-zinc-100 dark:bg-zinc-900/10 transition-colors duration-300">
+                <button onClick={() => toggleTask(task.id)} className="text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors">
                   <CheckSquare className="w-5 h-5" />
                 </button>
-                <span className="text-sm text-zinc-500 line-through flex-1 break-words whitespace-normal">
+                <span className="text-sm text-zinc-500 line-through flex-1 break-words whitespace-normal transition-colors duration-300">
                   {task.title}
                 </span>
               </div>
