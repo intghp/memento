@@ -5,6 +5,7 @@ import { useDateStore } from '../../store/useDateStore';
 import { cn } from '../../utils/cn';
 import { subDays, format } from 'date-fns';
 import type { Habit } from '../../types';
+import { HabitMacroVision } from './HabitMacroVision';
 
 // ==========================================
 // CONSTANTES & CONFIGURAÇÕES (ESTÁTICOS)
@@ -56,6 +57,7 @@ export function HabitList() {
   const [newHabitName, setNewHabitName] = useState('');
   const [selectedDays, setSelectedDays] = useState<string[]>(['0', '1', '2', '3', '4', '5', '6']);
   const [selectedShift, setSelectedShift] = useState<ShiftType>('any');
+  const [macroHabit, setMacroHabit] = useState<Habit | null>(null);
 
   // ==========================================
   // ESTADOS QUANTITATIVOS
@@ -147,6 +149,8 @@ export function HabitList() {
       dayOfMonth: format(dateObj, 'dd')
     };
   });
+
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
 
   // ==========================================
   // AGRUPAMENTO DE HÁBITOS POR TURNO
@@ -386,133 +390,152 @@ export function HabitList() {
                   </div>
 
                   <div className="space-y-2">
-                    {shiftHabits.map((habit) => (
-                      <div key={habit.id} className={cn(
-                        "grid gap-4 px-4 py-3 bg-zinc-50/50 hover:bg-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-900/80 rounded-xl border border-zinc-200 dark:border-zinc-800/30 transition-colors duration-300 items-center group",
-                        isConfigMode ? "grid-cols-[1fr_auto]" : "grid-cols-[minmax(200px,1fr)_repeat(7,minmax(48px,1fr))]"
-                      )}>
-                        
-                        <div className="flex flex-col pr-4 pl-7 transition-colors duration-300">
-                          <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate">{habit.name}</span>
-                          {habit.is_quantitative && (
-                            <span className="text-xs text-zinc-500 dark:text-zinc-400 uppercase font-semibold mt-1">
-                              Meta: {habit.goal_amount} {habit.unit}
-                            </span>
-                          )}
-                        </div>
+                    {shiftHabits.map((habit) => {
+                      const dbCreatedDateStr = habit.created_at ? habit.created_at.substring(0, 10) : '2000-01-01';
 
-                        {/* MODO DE CONFIGURAÇÃO (Botões Editar / Excluir) */}
-                        {isConfigMode ? (
-                          <div className="flex items-center justify-end gap-2 pr-2">
-                            <button onClick={() => openEditForm(habit)} className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200 dark:text-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors duration-300" title="Editar">
-                              <Pencil className="w-4 h-4" />
+                      return (
+                        <div key={habit.id} className={cn(
+                          "grid gap-4 px-4 py-3 bg-zinc-50/50 hover:bg-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-900/80 rounded-xl border border-zinc-200 dark:border-zinc-800/30 transition-colors duration-300 items-center group",
+                          isConfigMode ? "grid-cols-[1fr_auto]" : "grid-cols-[minmax(200px,1fr)_repeat(7,minmax(48px,1fr))]"
+                        )}>
+                          
+                          <div className="flex flex-col pr-4 pl-7 transition-colors duration-300">
+                            <button 
+                              onClick={() => !isConfigMode && setMacroHabit(habit)}
+                              className={cn(
+                                "font-medium text-left truncate transition-colors",
+                                isConfigMode ? "text-zinc-800 dark:text-zinc-200 cursor-default" : "text-zinc-900 dark:text-zinc-100 hover: cursor-pointer"
+                              )}
+                            >
+                              {habit.name}
                             </button>
-                            <button onClick={() => { if(window.confirm('Tem certeza que deseja excluir este hábito e todo o seu histórico?')) deleteHabit(habit.id); }} className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-100 dark:text-zinc-500 dark:hover:text-red-400 dark:hover:bg-red-400/10 rounded-lg transition-colors duration-300" title="Excluir">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            {habit.is_quantitative && (
+                              <span className="text-xs text-zinc-500 dark:text-zinc-400 uppercase font-semibold mt-1">
+                                Meta: {habit.goal_amount} {habit.unit}
+                              </span>
+                            )}
                           </div>
-                        ) : (
-                          // MODO NORMAL: O Mini-Heatmap dos últimos 7 dias 
-                          last7Days.map((day, i) => {
-                            const isActiveThisDay = habit.frequency === 'daily' || habit.specific_days?.includes(day.dayOfWeek.toString());
-                            
-                            if (!isActiveThisDay) {
+
+                          {/* MODO DE CONFIGURAÇÃO (Botões Editar / Excluir) */}
+                          {isConfigMode ? (
+                            <div className="flex items-center justify-end gap-2 pr-2">
+                              <button onClick={() => openEditForm(habit)} className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200 dark:text-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors duration-300" title="Editar">
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => { if(window.confirm('Tem certeza que deseja excluir este hábito e todo o seu histórico?')) deleteHabit(habit.id); }} className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-100 dark:text-zinc-500 dark:hover:text-red-400 dark:hover:bg-red-400/10 rounded-lg transition-colors duration-300" title="Excluir">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            // MODO NORMAL: O Mini-Heatmap dos últimos 7 dias 
+                            last7Days.map((day, i) => {
+                              const isActiveThisDay = habit.frequency === 'daily' || habit.specific_days?.includes(day.dayOfWeek.toString());
+                              const isBeforeCreation = day.dateStr < dbCreatedDateStr;
+                              
+                              if (!isActiveThisDay || isBeforeCreation) {
+                                return (
+                                  <div key={i} className="flex items-center justify-center w-8 h-8 mx-auto">
+                                    <span className="text-zinc-300 dark:text-zinc-800 text-lg leading-none">-</span>
+                                  </div>
+                                );
+                              }
+
+                              // O check-in do dia SELECIONADO para mostrar no quadrado principal
+                              const log = logs.find(l => l.habit_id === habit.id && l.target_date === day.dateStr);
+                              const isCompleted = log ? log.is_completed : false;
+                              const isSkipped = log ? log.is_skipped : false;
+                              const isPartial = habit.is_quantitative && log?.amount_completed !== undefined && log.amount_completed > 0 && !isCompleted && !isSkipped;
+                              const isMissed = !isCompleted && !isSkipped && !isPartial && day.dateStr < todayStr;
+                              
+                              // Destaca visualmente qual dia é "hoje" na grade
+                              const isSelectedDay = day.dateStr === selectedDate;
+                              const isEditingQuantitative = activeInput?.habitId === habit.id && activeInput?.date === day.dateStr;
+
+                              const formatAmount = (val: number) => {
+                                if (val >= 1000) return (val / 1000).toFixed(val % 1000 === 0 ? 0 : 1) + 'k';
+                                return Number.isInteger(val) ? val : Number(val).toFixed(1);
+                              };
+
                               return (
-                                <div key={i} className="flex justify-center">
-                                  <span className="text-zinc-300 dark:text-zinc-800 text-lg leading-none transition-colors duration-300">-</span>
+                                <div key={i} className="flex justify-center relative group/btn">
+                                  
+                                  {isEditingQuantitative ? (
+                                    <input
+                                      autoFocus
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={activeInput.value}
+                                      onChange={(e) => {
+                                        const val = e.target.value.replace(/[^0-9.,]/g, '');
+                                        setActiveInput({ ...activeInput, value: val });
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') e.currentTarget.blur();
+                                        if (e.key === 'Escape') {
+                                          e.currentTarget.value = '';
+                                          e.currentTarget.blur();
+                                        }
+                                      }}
+                                      onBlur={(e) => {
+                                        const val = e.target.value.trim();
+                                        if (val !== '') {
+                                          const amount = parseFloat(val.replace(',', '.'));
+                                          if (!isNaN(amount)) toggleHabit(habit.id, day.dateStr, amount);
+                                        }
+                                        setActiveInput(null);
+                                      }}
+                                      className="w-12 h-8 rounded-lg bg-transparent border-2 border-zinc-400 dark:border-zinc-500 text-zinc-900 dark:text-zinc-100 text-xs font-bold text-center focus:outline-none z-10"
+                                    />
+                                  ) : (
+                                    <button
+                                      onClick={() => handleToggleHabitClick(habit, day.dateStr, isCompleted, log?.amount_completed)}
+                                      onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        toggleHabit(habit.id, day.dateStr, undefined, true);
+                                      }}
+                                      className={cn(
+                                        "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 border overflow-hidden",
+                                        isSkipped 
+                                          ? "bg-zinc-200 border-zinc-300 text-zinc-500 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-400 cursor-pointer"
+                                          : isCompleted 
+                                            ? "bg-emerald-500/20 border-emerald-500/30 text-emerald-600 dark:bg-emerald-500/15 dark:border-emerald-500/20 dark:text-emerald-400 cursor-pointer" 
+                                            : isPartial
+                                              ? "bg-transparent border-emerald-500/60 text-emerald-600 dark:border-emerald-500/50 dark:text-emerald-400 cursor-pointer"
+                                              : isMissed
+                                                ? "bg-rose-500/10 border-rose-500/20 text-rose-500 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400/80 cursor-pointer"
+                                                : isSelectedDay 
+                                                  ? "bg-zinc-100 border-zinc-300 text-zinc-400 hover:border-zinc-900 hover:text-zinc-900 dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-600 dark:hover:border-zinc-400 dark:hover:text-zinc-400 cursor-pointer" 
+                                                  : "bg-transparent border-zinc-200 text-zinc-300 hover:border-zinc-400 hover:text-zinc-500 dark:border-zinc-800/50 dark:text-zinc-700 dark:hover:border-zinc-600 dark:hover:text-zinc-500 cursor-pointer"
+                                      )}
+                                    >
+                                      {isSkipped ? (
+                                        <Minus className="w-4 h-4 shrink-0" />
+                                      ) : (isCompleted || isPartial) && habit.is_quantitative && log?.amount_completed !== undefined ? (
+                                        <span className="text-[11px] font-bold truncate max-w-full px-1">
+                                          {formatAmount(log.amount_completed)}
+                                        </span>
+                                      ) : isCompleted ? (
+                                        <Check className="w-5 h-5 shrink-0" />
+                                      ) : isMissed ? (
+                                        <X className="w-4 h-4 shrink-0" />
+                                      ) : habit.is_quantitative && isSelectedDay ? (
+                                        <span className="text-[10px] font-bold opacity-30 shrink-0">+</span>
+                                      ) : null}
+                                    </button>
+                                  )}
+                                  
+                                  {habit.is_quantitative && log?.amount_completed !== undefined && !isEditingQuantitative && (
+                                    <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold py-1 px-2 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none truncate max-w-[100px] z-50 shadow-xl">
+                                      {formatAmount(log.amount_completed)} / {habit.goal_amount} {habit.unit}
+                                    </div>
+                                  )}
                                 </div>
                               );
-                            }
-
-                            // O check-in do dia SELECIONADO para mostrar no quadrado principal
-                            const log = logs.find(l => l.habit_id === habit.id && l.target_date === day.dateStr);
-                            const isCompleted = log ? log.is_completed : false;
-                            const isSkipped = log ? log.is_skipped : false;
-                            
-                            // Destaca visualmente qual dia é "hoje" na grade
-                            const isSelectedDay = day.dateStr === selectedDate;
-                            const isEditingQuantitative = activeInput?.habitId === habit.id && activeInput?.date === day.dateStr;
-
-                            const formatAmount = (val: number) => {
-                              if (val >= 1000) return (val / 1000).toFixed(val % 1000 === 0 ? 0 : 1) + 'k';
-                              return Number.isInteger(val) ? val : Number(val).toFixed(1);
-                            };
-
-                            return (
-                              <div key={i} className="flex justify-center relative group/btn">
-                                
-                                {isEditingQuantitative ? (
-                                  <input
-                                    autoFocus
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={activeInput.value}
-                                    onChange={(e) => {
-                                      const val = e.target.value.replace(/[^0-9.,]/g, '');
-                                      setActiveInput({ ...activeInput, value: val });
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') e.currentTarget.blur();
-                                      if (e.key === 'Escape') {
-                                        e.currentTarget.value = '';
-                                        e.currentTarget.blur();
-                                      }
-                                    }}
-                                    onBlur={(e) => {
-                                      const val = e.target.value.trim();
-                                      if (val !== '') {
-                                        const amount = parseFloat(val.replace(',', '.'));
-                                        if (!isNaN(amount)) toggleHabit(habit.id, day.dateStr, amount);
-                                      }
-                                      setActiveInput(null);
-                                    }}
-                                    className="w-12 h-8 rounded-lg bg-transparent border-2 border-zinc-400 dark:border-zinc-500 text-zinc-900 dark:text-zinc-100 text-xs font-bold text-center focus:outline-none z-10"
-                                  />
-                                ) : (
-                                  <button
-                                    onClick={() => handleToggleHabitClick(habit, day.dateStr, isCompleted, log?.amount_completed)}
-                                    onContextMenu={(e) => {
-                                      e.preventDefault();
-                                      toggleHabit(habit.id, day.dateStr, undefined, true);
-                                    }}
-                                    className={cn(
-                                      "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 border overflow-hidden",
-                                      isSkipped 
-                                        ? "bg-zinc-100 border-zinc-300 border-dashed text-zinc-400 dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-500"
-                                        : isCompleted 
-                                          ? "bg-zinc-900 border-zinc-900 text-white shadow-sm dark:bg-zinc-200 dark:border-zinc-200 dark:text-zinc-900 dark:shadow-[0_0_10px_rgba(228,228,231,0.1)]" 
-                                          : isSelectedDay 
-                                            ? "bg-zinc-100 border-zinc-300 text-zinc-400 hover:border-zinc-900 hover:text-zinc-900 dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-600 dark:hover:border-zinc-400 dark:hover:text-zinc-400" 
-                                            : "bg-transparent border-zinc-200 text-zinc-300 hover:border-zinc-400 hover:text-zinc-500 dark:border-zinc-800/50 dark:text-zinc-700 dark:hover:border-zinc-600 dark:hover:text-zinc-500"
-                                    )}
-                                  >
-                                    {isSkipped ? <Minus className="w-4 h-4 shrink-0" /> : (
-                                      isCompleted ? <Check className="w-5 h-5 shrink-0" /> : (
-                                        habit.is_quantitative && log?.amount_completed !== undefined ? (
-                                          <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 truncate max-w-full px-1">
-                                            {formatAmount(log.amount_completed)}
-                                          </span>
-                                        ) : (
-                                          habit.is_quantitative && isSelectedDay && !isCompleted && (
-                                            <span className="text-[10px] font-bold opacity-30 shrink-0">+</span>
-                                          )
-                                        )
-                                      )
-                                    )}
-                                  </button>
-                                )}
-                                
-                                {habit.is_quantitative && log?.amount_completed !== undefined && !isEditingQuantitative && (
-                                  <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[10px] font-bold py-1 px-2 rounded opacity-0 group-hover/btn:opacity-100 transition-opacity pointer-events-none truncate max-w-[100px] z-50 shadow-xl">
-                                    {formatAmount(log.amount_completed)} / {habit.goal_amount} {habit.unit}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    ))}
+                            })
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -520,6 +543,10 @@ export function HabitList() {
           </div>
         )}
       </div>
+      
+      {macroHabit && (
+        <HabitMacroVision habit={macroHabit} onClose={() => setMacroHabit(null)} />
+      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@ interface HabitState {
   toggleHabit: (habitId: number, date: string, amount?: number, skip?: boolean) => Promise<void>;
   updateHabit: (habitID: number, habitData: HabitUpdate) => Promise<void>;
   deleteHabit: (habitID: number) => Promise<void>;
+  getHabitMacroLogs: (habitId: number, days?: number) => Promise<HabitLog[]>;
 }
 
 // ==========================================
@@ -94,6 +95,28 @@ export const useHabitStore = create<HabitState>((set, get) => ({
       }));
     } catch (error) {
       console.error('Erro ao deletar hábito:', error);
+    }
+  },
+
+  // ==========================================
+  // HEATMAP
+  // ==========================================
+
+  getHabitMacroLogs: async (habitId, days = 90) => {
+    try {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - days);
+      
+      const startStr = startDate.toISOString().split('T')[0];
+      const endStr = endDate.toISOString().split('T')[0];
+
+      // Busca os logs do período e filtra apenas os do hábito selecionado
+      const response = await api.get<HabitLog[]>(`/habits/logs?start_date=${startStr}&end_date=${endStr}`);
+      return response.data.filter(log => log.habit_id === habitId);
+    } catch (error) {
+      console.error('Erro ao buscar histórico macro:', error);
+      return [];
     }
   },
 
