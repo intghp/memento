@@ -85,6 +85,7 @@ export interface HabitLog {
   habit_id: number;
   target_date: string;
   is_completed: boolean;
+  is_skipped?: boolean;
 
   amount_completed?: number;
 }

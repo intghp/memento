@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Check, X, Sunrise, Sun, Moon, Maximize, Settings, Trash2, Pencil } from 'lucide-react';
+import { Plus, Check, X, Sunrise, Sun, Moon, Maximize, Settings, Trash2, Pencil, Minus } from 'lucide-react';
 import { useHabitStore } from '../../store/useHabitStore';
 import { useDateStore } from '../../store/useDateStore';
 import { cn } from '../../utils/cn';
@@ -129,10 +129,8 @@ export function HabitList() {
     );
   };
 
-  // Handler Inteligente e Seguro para clique na bolinha
   const handleToggleHabitClick = (habit: Habit, dateStr: string, isAlreadyCompleted: boolean, currentAmount?: number) => {
     if (habit.is_quantitative && !isAlreadyCompleted) {
-      // Abre o input pré-preenchido com o valor parcial (caso exista)
       setActiveInput({ habitId: habit.id, date: dateStr, value: currentAmount ? currentAmount.toString() : '' });
     } else {
       toggleHabit(habit.id, dateStr);
@@ -142,7 +140,6 @@ export function HabitList() {
   // GERAÇÃO DA GRADE (Histórico de 7 Dias)
   const endDateObj = new Date(`${selectedDate}T12:00:00`);
   const last7Days = Array.from({ length: 7 }).map((_, i) => {
-    // Conta 6 dias para trás até chegar em 0 (o dia atual)
     const dateObj = subDays(endDateObj, 6 - i);
     return {
       dateStr: format(dateObj, 'yyyy-MM-dd'),
@@ -354,7 +351,6 @@ export function HabitList() {
             {SHIFTS.map(shiftConfig => {
               const shiftHabits = groupedHabits[shiftConfig.id] || [];
               
-              // Se não houver hábitos cadastrados para este turno, esconde a seção
               if (shiftHabits.length === 0) return null;
 
               const Icon = shiftConfig.icon;
@@ -375,7 +371,6 @@ export function HabitList() {
                           <span className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Ações</span>
                         </div>
                     ) : (
-                      // 1ª CORREÇÃO: Usar o INDEX (i) como key em vez do dateStr
                       last7Days.map((day, i) => (
                         <div key={i} className="flex flex-col items-center justify-end pb-2 opacity-60 transition-colors duration-300">
                           <span className="text-[10px] text-zinc-500 uppercase font-semibold">{SHORT_DAY_NAMES[day.dayOfWeek]}</span>
@@ -418,13 +413,11 @@ export function HabitList() {
                           </div>
                         ) : (
                           // MODO NORMAL: O Mini-Heatmap dos últimos 7 dias 
-                          // 2ª CORREÇÃO: Usar o INDEX (i) como key em vez do dateStr
                           last7Days.map((day, i) => {
                             const isActiveThisDay = habit.frequency === 'daily' || habit.specific_days?.includes(day.dayOfWeek.toString());
                             
                             if (!isActiveThisDay) {
                               return (
-                                // 3ª CORREÇÃO: Usar o INDEX (i) aqui também
                                 <div key={i} className="flex justify-center">
                                   <span className="text-zinc-300 dark:text-zinc-800 text-lg leading-none transition-colors duration-300">-</span>
                                 </div>
@@ -434,6 +427,7 @@ export function HabitList() {
                             // O check-in do dia SELECIONADO para mostrar no quadrado principal
                             const log = logs.find(l => l.habit_id === habit.id && l.target_date === day.dateStr);
                             const isCompleted = log ? log.is_completed : false;
+                            const isSkipped = log ? log.is_skipped : false;
                             
                             // Destaca visualmente qual dia é "hoje" na grade
                             const isSelectedDay = day.dateStr === selectedDate;
@@ -445,7 +439,6 @@ export function HabitList() {
                             };
 
                             return (
-                              // 4ª CORREÇÃO: Usar o INDEX (i) como key principal da célula
                               <div key={i} className="flex justify-center relative group/btn">
                                 
                                 {isEditingQuantitative ? (
@@ -478,23 +471,31 @@ export function HabitList() {
                                 ) : (
                                   <button
                                     onClick={() => handleToggleHabitClick(habit, day.dateStr, isCompleted, log?.amount_completed)}
+                                    onContextMenu={(e) => {
+                                      e.preventDefault();
+                                      toggleHabit(habit.id, day.dateStr, undefined, true);
+                                    }}
                                     className={cn(
                                       "w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 border overflow-hidden",
-                                      isCompleted 
-                                        ? "bg-zinc-900 border-zinc-900 text-white shadow-sm dark:bg-zinc-200 dark:border-zinc-200 dark:text-zinc-900 dark:shadow-[0_0_10px_rgba(228,228,231,0.1)]" 
-                                        : isSelectedDay 
-                                          ? "bg-zinc-100 border-zinc-300 text-zinc-400 hover:border-zinc-900 hover:text-zinc-900 dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-600 dark:hover:border-zinc-400 dark:hover:text-zinc-400" 
-                                          : "bg-transparent border-zinc-200 text-zinc-300 hover:border-zinc-400 hover:text-zinc-500 dark:border-zinc-800/50 dark:text-zinc-700 dark:hover:border-zinc-600 dark:hover:text-zinc-500"
+                                      isSkipped 
+                                        ? "bg-zinc-100 border-zinc-300 border-dashed text-zinc-400 dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-500"
+                                        : isCompleted 
+                                          ? "bg-zinc-900 border-zinc-900 text-white shadow-sm dark:bg-zinc-200 dark:border-zinc-200 dark:text-zinc-900 dark:shadow-[0_0_10px_rgba(228,228,231,0.1)]" 
+                                          : isSelectedDay 
+                                            ? "bg-zinc-100 border-zinc-300 text-zinc-400 hover:border-zinc-900 hover:text-zinc-900 dark:bg-zinc-800/50 dark:border-zinc-700 dark:text-zinc-600 dark:hover:border-zinc-400 dark:hover:text-zinc-400" 
+                                            : "bg-transparent border-zinc-200 text-zinc-300 hover:border-zinc-400 hover:text-zinc-500 dark:border-zinc-800/50 dark:text-zinc-700 dark:hover:border-zinc-600 dark:hover:text-zinc-500"
                                     )}
                                   >
-                                    {isCompleted ? <Check className="w-5 h-5 shrink-0" /> : (
-                                      habit.is_quantitative && log?.amount_completed !== undefined ? (
-                                        <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 truncate max-w-full px-1">
-                                          {formatAmount(log.amount_completed)}
-                                        </span>
-                                      ) : (
-                                        habit.is_quantitative && isSelectedDay && !isCompleted && (
-                                          <span className="text-[10px] font-bold opacity-30 shrink-0">+</span>
+                                    {isSkipped ? <Minus className="w-4 h-4 shrink-0" /> : (
+                                      isCompleted ? <Check className="w-5 h-5 shrink-0" /> : (
+                                        habit.is_quantitative && log?.amount_completed !== undefined ? (
+                                          <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 truncate max-w-full px-1">
+                                            {formatAmount(log.amount_completed)}
+                                          </span>
+                                        ) : (
+                                          habit.is_quantitative && isSelectedDay && !isCompleted && (
+                                            <span className="text-[10px] font-bold opacity-30 shrink-0">+</span>
+                                          )
                                         )
                                       )
                                     )}
