@@ -53,7 +53,7 @@ export interface Habit {
   scheduled_time?: string;
   frequency: FrequencyType;
   specific_days?: string;
-  shift: ShiftType
+  shift: ShiftType;
   created_at: string;
 
   is_quantitative: boolean;
@@ -85,6 +85,7 @@ export interface HabitLog {
   habit_id: number;
   target_date: string;
   is_completed: boolean;
+  is_skipped?: boolean;
 
   amount_completed?: number;
 }

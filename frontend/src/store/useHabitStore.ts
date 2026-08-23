@@ -13,9 +13,10 @@ interface HabitState {
   isLoading: boolean;
   fetchHabitsAndLogs: (date: string) => Promise<void>;
   addHabit: (habitData: HabitCreate) => Promise<void>;
-  toggleHabit: (habitId: number, date: string, amount?: number) => Promise<void>;
+  toggleHabit: (habitId: number, date: string, amount?: number, skip?: boolean) => Promise<void>;
   updateHabit: (habitID: number, habitData: HabitUpdate) => Promise<void>;
   deleteHabit: (habitID: number) => Promise<void>;
+  getHabitMacroLogs: (habitId: number, days?: number) => Promise<HabitLog[]>;
 }
 
 // ==========================================
@@ -98,10 +99,32 @@ export const useHabitStore = create<HabitState>((set, get) => ({
   },
 
   // ==========================================
+  // HEATMAP
+  // ==========================================
+
+  getHabitMacroLogs: async (habitId, days = 90) => {
+    try {
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - days);
+      
+      const startStr = startDate.toISOString().split('T')[0];
+      const endStr = endDate.toISOString().split('T')[0];
+
+      // Busca os logs do período e filtra apenas os do hábito selecionado
+      const response = await api.get<HabitLog[]>(`/habits/logs?start_date=${startStr}&end_date=${endStr}`);
+      return response.data.filter(log => log.habit_id === habitId);
+    } catch (error) {
+      console.error('Erro ao buscar histórico macro:', error);
+      return [];
+    }
+  },
+
+  // ==========================================
   // Marcar (TOGGLE)
   // ==========================================
 
-  toggleHabit: async (habitId, date, amount) => {
+  toggleHabit: async (habitId, date, amount, skip = false) => {
     const previousLogs = get().logs;
     const habit = get().habits.find(h => h.id === habitId);
 
@@ -110,30 +133,49 @@ export const useHabitStore = create<HabitState>((set, get) => ({
     );
 
     let newLogs = [...previousLogs];
-    let isCompletedOptimistic = true;
+    let isCompletedOptimistic = false;
+    let isSkippedOptimistic = false;
+    let amountOptimistic = amount;
 
     if (existingLogIndex >= 0) {
-      if (amount === undefined) {
-        isCompletedOptimistic = !newLogs[existingLogIndex].is_completed;
-      } else if (habit?.is_quantitative) {
-        isCompletedOptimistic = amount >= (habit.goal_amount || 0);
+      const currentLog = newLogs[existingLogIndex];
+      
+      if (skip) {
+        isSkippedOptimistic = !currentLog.is_skipped;
+        isCompletedOptimistic = false;
+        amountOptimistic = undefined;
+      } else {
+        isSkippedOptimistic = false;
+        if (amount === undefined) {
+          isCompletedOptimistic = !currentLog.is_completed;
+        } else if (habit?.is_quantitative) {
+          isCompletedOptimistic = amount >= (habit.goal_amount || 0);
+        }
       }
        
       newLogs[existingLogIndex] = {
-        ...newLogs[existingLogIndex],
+        ...currentLog,
         is_completed: isCompletedOptimistic,
-        amount_completed: amount !== undefined ? amount : (isCompletedOptimistic ? newLogs[existingLogIndex].amount_completed : undefined)
+        is_skipped: isSkippedOptimistic,
+        amount_completed: amountOptimistic !== undefined ? amountOptimistic : (isCompletedOptimistic ? currentLog.amount_completed : undefined)
       };
     } else {
-      if (habit?.is_quantitative && amount !== undefined) {
-          isCompletedOptimistic = amount >= (habit.goal_amount || 0);
+      if (skip) {
+        isSkippedOptimistic = true;
+      } else {
+        isCompletedOptimistic = true;
+        if (habit?.is_quantitative && amount !== undefined) {
+            isCompletedOptimistic = amount >= (habit.goal_amount || 0);
+        }
       }
+      
       newLogs.push({
         id: Date.now(),
         habit_id: habitId,
         target_date: date,
         is_completed: isCompletedOptimistic,
-        amount_completed: amount
+        is_skipped: isSkippedOptimistic,
+        amount_completed: amountOptimistic
       });
     } 
 
@@ -143,6 +185,7 @@ export const useHabitStore = create<HabitState>((set, get) => ({
       // Monta a URL com ou sem o amount
       const queryParams = new URLSearchParams({ target_date: date });
       if (amount !== undefined) queryParams.append('amount', amount.toString());
+      if (skip) queryParams.append('skip', 'true');
       
       const response = await api.post<HabitLog>(`/habits/${habitId}/toggle?${queryParams.toString()}`);
       

@@ -88,5 +88,6 @@ class HabitLog(SQLModel, table=True):
     habit_id: int = Field(foreign_key="habit.id")
     target_date: date
     is_completed: bool = False
+    is_skipped: bool = False
 
     amount_completed: float | None = None

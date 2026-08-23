@@ -204,12 +204,13 @@ async def get_habit_logs(
     result = await session.exec(query)
     return result.all()
 
-# Marcar ou desmarcar o hábito
+# Marcar, desmarcar ou isentar o hábito
 @app.post("/api/habits/{habit_id}/toggle", response_model=HabitLog)
 async def toggle_habit(
     habit_id: int,
     target_date: date = Query(..., description="A data em que o hábito foi feito"),
-    amount: Optional[float] = Query(None, description="Quantidade realizada (para hábitos quantitativos)"),
+    amount: Optional[float] = Query(None, description="Quantidade realizada (para quantitativos)"),
+    skip: bool = Query(False, description="Marcar como isento/pulado"), # <-- NOVO PARÂMETRO
     session: AsyncSession = Depends(get_session)
 ):
     # Busca o histórico do dia e as configurações do hábito
@@ -225,29 +226,42 @@ async def toggle_habit(
         raise HTTPException(status_code=404, detail="Habit not found")
 
     if log:
-        if habit.is_quantitative and amount is not None:
-            # Se for quantitativo, atualiza o valor e verifica se bateu a meta
+        if skip:
+            # Alterna o estado de "isento"
+            log.is_skipped = not log.is_skipped
+            log.is_completed = False
+            log.amount_completed = None
+        elif habit.is_quantitative and amount is not None:
+            # Lógica quantitativa
             log.amount_completed = amount
             log.is_completed = amount >= (habit.goal_amount or 0)
+            log.is_skipped = False
         else:
             # Comportamento padrão (Toggle normal)
             log.is_completed = not log.is_completed
-            # Se desmarcou, zera a quantidade
+            log.is_skipped = False
             if not log.is_completed:
                 log.amount_completed = None
                 
         session.add(log)
     else:
         # Criando o check-in pela primeira vez no dia
-        is_completed = True
-        if habit.is_quantitative and amount is not None:
-            is_completed = amount >= (habit.goal_amount or 0)
+        is_completed = False
+        is_skipped = False
+        
+        if skip:
+            is_skipped = True
+        else:
+            is_completed = True
+            if habit.is_quantitative and amount is not None:
+                is_completed = amount >= (habit.goal_amount or 0)
             
         log = HabitLog(
             habit_id=habit_id, 
             target_date=target_date, 
             is_completed=is_completed,
-            amount_completed=amount
+            amount_completed=amount,
+            is_skipped=is_skipped
         )
         session.add(log)
         
