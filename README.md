@@ -40,29 +40,46 @@
 - SQLModel (ORM)
 - SQLite (Banco de dados local e veloz)
 
-## 📦 Como Rodar Localmente
+## 📦 Como Rodar Localmente (Monorepo Setup)
 
-**1. Clone o repositório**
+O Memento utiliza um ambiente integrado. Graças ao `concurrently`, não é necessário múltiplos terminais para rodar a aplicação.
+
+**1. Clone o repositório e instale a base**
 ```bash
 git clone https://github.com/intghp/memento.git
 cd memento
+npm install
 ```
 
-**2. Iniciando o Backend**
+**2. Preparando o banco de dados (Backend)**
 ```bash
 cd backend
 python -m venv venv
+
+# Ative o ambiente virtual:
+# No Mac/Linux:
 source venv/bin/activate
+
+# No Windows:
+venv/Scripts/activate
+
 pip install -r requirements.txt
-fastapi dev main.py
+cd ..
 ```
 
-**3. Iniciando o Frontend**
+**3. Preparando a Interface (Frontend)**
 ```bash
 cd frontend
 npm install
-npm run dev
+cd ..
+```
+
+**4. Inicie o Memento**
+```bash
+npm start
 ```
 
 ---
-*Feito com foco e minimalismo.*
+O `concurrently` irá iniciar automaticamente a API (Python) na porta 8000 e a Interface (Vite) na porta 5173. Acesse `http://localhost:5173` e aproveite!
+
+*(Nota para usuários de Windows: Se o `npm start` não encontrar o uvicorn, altere o script `start:api` no package.json raiz de `venv/bin/uvicorn` para `venv\\Scripts\\uvicorn`).*
