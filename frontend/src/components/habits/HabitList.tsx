@@ -97,21 +97,34 @@ export function HabitList() {
   };
 
   const openEditForm = (habit: Habit) => {
-    setEditingHabitId(habit.id);
-    setNewHabitName(habit.name);
-    setSelectedShift(habit.shift || 'any');
-    if (habit.frequency === 'specific_days' && habit.specific_days) {
-      setSelectedDays(habit.specific_days.split(','));
-    } else {
-      setSelectedDays(['0', '1', '2', '3', '4', '5', '6']);
-    }
-    
-    setIsQuantitative(habit.is_quantitative || false);
-    setGoalAmount(habit.goal_amount ? habit.goal_amount.toString() : '');
-    setUnit(habit.unit || '');
+    try {
+      setEditingHabitId(habit.id);
+      setNewHabitName(habit.name || '');
+      setSelectedShift(habit.shift || 'any');
+      
+      if (habit.frequency === 'specific_days' && habit.specific_days) {
+        setSelectedDays(String(habit.specific_days).split(','));
+      } else {
+        setSelectedDays(['0', '1', '2', '3', '4', '5', '6']);
+      }
+      
+      setIsQuantitative(Boolean(habit.is_quantitative));
+      setGoalAmount(habit.goal_amount !== undefined && habit.goal_amount !== null ? String(habit.goal_amount) : '');
+      setUnit(habit.unit || '');
 
-    setIsCreating(true);
-    setIsConfigMode(false);
+      setIsCreating(true);
+      setIsConfigMode(false);
+
+      setTimeout(() => {
+        const scrollableDiv = document.getElementById('habit-scroll-container');
+        if (scrollableDiv) scrollableDiv.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 50);
+
+    } catch (e) {
+      console.error("Erro ao carregar os dados para edição:", e);
+      alert("Houve um erro ao tentar editar este hábito. Verifique os dados no banco de dados.");
+    }
   };
 
   const closeForm = () => {
@@ -338,10 +351,13 @@ export function HabitList() {
       )}
 
       {/* Lista de Hábitos e a Grade de 7 Dias */}
-      <div className={cn(
-        "flex-1 overflow-auto custom-scrollbar transition-all duration-300",
-        isLoading ? "opacity-40 pointer-events-none" : "opacity-100"
-      )}>
+      <div 
+        id="habit-scroll-container" 
+        className={cn(
+          "flex-1 overflow-auto custom-scrollbar transition-all duration-300",
+          isLoading ? "opacity-40 pointer-events-none" : "opacity-100"
+        )}
+      >
         {habits.length === 0 ? (
           <div className="text-center py-20 border-2 border-dashed border-zinc-300 dark:border-zinc-800/50 rounded-2xl transition-colors duration-300">
             <p className="text-zinc-500 text-sm">Nenhum hábito cadastrado.</p>
@@ -375,8 +391,8 @@ export function HabitList() {
                           <span className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Ações</span>
                         </div>
                     ) : (
-                      last7Days.map((day, i) => (
-                        <div key={i} className="flex flex-col items-center justify-end pb-2 opacity-60 transition-colors duration-300">
+                      last7Days.map((day) => (
+                        <div key={day.dateStr} className="flex flex-col items-center justify-end pb-2 opacity-60 transition-colors duration-300">
                           <span className="text-[10px] text-zinc-500 uppercase font-semibold">{SHORT_DAY_NAMES[day.dayOfWeek]}</span>
                           <span className={cn(
                             "text-sm font-bold mt-1 transition-colors duration-300",
@@ -404,7 +420,7 @@ export function HabitList() {
                               onClick={() => !isConfigMode && setMacroHabit(habit)}
                               className={cn(
                                 "font-medium text-left truncate transition-colors",
-                                isConfigMode ? "text-zinc-800 dark:text-zinc-200 cursor-default" : "text-zinc-900 dark:text-zinc-100 hover: cursor-pointer"
+                                isConfigMode ? "text-zinc-800 dark:text-zinc-200 cursor-default" : "text-zinc-900 dark:text-zinc-100 hover:underline cursor-pointer"
                               )}
                             >
                               {habit.name}
@@ -419,35 +435,62 @@ export function HabitList() {
                           {/* MODO DE CONFIGURAÇÃO (Botões Editar / Excluir) */}
                           {isConfigMode ? (
                             <div className="flex items-center justify-end gap-2 pr-2">
-                              <button onClick={() => openEditForm(habit)} className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200 dark:text-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors duration-300" title="Editar">
-                                <Pencil className="w-4 h-4" />
+                              <button 
+                                type="button"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  openEditForm(habit);
+                                }} 
+                                className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200 dark:text-zinc-500 dark:hover:text-zinc-200 dark:hover:bg-zinc-800 rounded-lg transition-colors duration-300" 
+                                title="Editar"
+                              >
+                                <Pencil className="w-4 h-4 pointer-events-none" />
                               </button>
-                              <button onClick={() => { if(window.confirm('Tem certeza que deseja excluir este hábito e todo o seu histórico?')) deleteHabit(habit.id); }} className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-100 dark:text-zinc-500 dark:hover:text-red-400 dark:hover:bg-red-400/10 rounded-lg transition-colors duration-300" title="Excluir">
-                                <Trash2 className="w-4 h-4" />
+                              
+                              <button 
+                                type="button"
+                                onClick={async (e) => { 
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  if(window.confirm('Tem certeza que deseja excluir este hábito e todo o seu histórico?')) {
+                                    await deleteHabit(habit.id);
+                                    
+                                    setTimeout(() => {
+                                      const stillExists = useHabitStore.getState().habits.some(h => h.id === habit.id);
+                                      if (stillExists) {
+                                        alert("⚠️ Erro no Servidor: O seu banco de dados bloqueou a exclusão. Para apagar um hábito com histórico, o banco precisa ter 'ON DELETE CASCADE' na tabela de logs.");
+                                      }
+                                    }, 400);
+                                  } 
+                                }} 
+                                className="p-2 text-zinc-400 hover:text-red-600 hover:bg-red-100 dark:text-zinc-500 dark:hover:text-red-400 dark:hover:bg-red-400/10 rounded-lg transition-colors duration-300" 
+                                title="Excluir"
+                              >
+                                <Trash2 className="w-4 h-4 pointer-events-none" />
                               </button>
                             </div>
                           ) : (
                             // MODO NORMAL: O Mini-Heatmap dos últimos 7 dias 
-                            last7Days.map((day, i) => {
+                            last7Days.map((day) => {
                               const isActiveThisDay = habit.frequency === 'daily' || habit.specific_days?.includes(day.dayOfWeek.toString());
                               const isBeforeCreation = day.dateStr < dbCreatedDateStr;
                               
                               if (!isActiveThisDay || isBeforeCreation) {
                                 return (
-                                  <div key={i} className="flex items-center justify-center w-8 h-8 mx-auto">
-                                    <span className="text-zinc-300 dark:text-zinc-800 text-lg leading-none">-</span>
+                                  <div key={day.dateStr} className="flex items-center justify-center w-8 h-8 mx-auto">
+                                    <span className="text-zinc-300 dark:text-zinc-700 text-lg leading-none">-</span>
                                   </div>
                                 );
                               }
 
-                              // O check-in do dia SELECIONADO para mostrar no quadrado principal
                               const log = logs.find(l => l.habit_id === habit.id && l.target_date === day.dateStr);
                               const isCompleted = log ? log.is_completed : false;
                               const isSkipped = log ? log.is_skipped : false;
                               const isPartial = habit.is_quantitative && log?.amount_completed !== undefined && log.amount_completed > 0 && !isCompleted && !isSkipped;
+                              
                               const isMissed = !isCompleted && !isSkipped && !isPartial && day.dateStr < todayStr;
                               
-                              // Destaca visualmente qual dia é "hoje" na grade
                               const isSelectedDay = day.dateStr === selectedDate;
                               const isEditingQuantitative = activeInput?.habitId === habit.id && activeInput?.date === day.dateStr;
 
@@ -457,7 +500,7 @@ export function HabitList() {
                               };
 
                               return (
-                                <div key={i} className="flex justify-center relative group/btn">
+                                <div key={day.dateStr} className="flex justify-center relative group/btn">
                                   
                                   {isEditingQuantitative ? (
                                     <input
