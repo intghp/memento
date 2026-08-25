@@ -205,12 +205,12 @@ async def get_habit_logs(
     return result.all()
 
 # Marcar, desmarcar ou isentar o hábito
-@app.post("/api/habits/{habit_id}/toggle", response_model=HabitLog)
+@app.post("/api/habits/{habit_id}/toggle") # Removemos o response_model restrito para permitir retornar {}
 async def toggle_habit(
     habit_id: int,
     target_date: date = Query(..., description="A data em que o hábito foi feito"),
     amount: Optional[float] = Query(None, description="Quantidade realizada (para quantitativos)"),
-    skip: bool = Query(False, description="Marcar como isento/pulado"), # <-- NOVO PARÂMETRO
+    skip: bool = Query(False, description="Marcar como isento/pulado"),
     session: AsyncSession = Depends(get_session)
 ):
     # Busca o histórico do dia e as configurações do hábito
@@ -242,8 +242,16 @@ async def toggle_habit(
             log.is_skipped = False
             if not log.is_completed:
                 log.amount_completed = None
-                
-        session.add(log)
+
+        # Se o log voltou a ser "nada", apagamos ele do DB
+        is_empty_amount = log.amount_completed is None or log.amount_completed == 0
+        if not log.is_completed and not log.is_skipped and is_empty_amount:
+            await session.delete(log)
+            await session.commit()
+            return {} # Retorna vazio, e o Frontend (Zustand) apaga da memória!
+        else:
+            session.add(log)
+            
     else:
         # Criando o check-in pela primeira vez no dia
         is_completed = False
@@ -266,7 +274,10 @@ async def toggle_habit(
         session.add(log)
         
     await session.commit()
-    await session.refresh(log)
+    # Só tenta dar refresh se o log não foi deletado
+    if log in session:
+        await session.refresh(log)
+        
     return log
 
 # Editar um Hábito
