@@ -11,6 +11,7 @@ interface HabitState {
   habits: Habit[];
   logs: HabitLog[];
   isLoading: boolean;
+  isBackgroundFetching: boolean;
   fetchHabitsAndLogs: (date: string) => Promise<void>;
   addHabit: (habitData: HabitCreate) => Promise<void>;
   toggleHabit: (habitId: number, date: string, amount?: number, skip?: boolean) => Promise<void>;
@@ -27,11 +28,18 @@ export const useHabitStore = create<HabitState>((set, get) => ({
   habits: [],
   logs: [],
   isLoading: false,
+  isBackgroundFetching: false,
 
   fetchHabitsAndLogs: async (date: string) => {
-    set({ isLoading: true });
-    try {
+    const isFirstLoad = get().habits.length === 0;
+    
+    if (isFirstLoad) {
+      set({ isLoading: true });
+    } else {
+      set({ isBackgroundFetching: true });
+    }
 
+    try {
       const endDateObj = new Date(`${date}T12:00:00`);
       const startDateObj = subDays(endDateObj, 6);
       const startDateStr = format(startDateObj, 'yyyy-MM-dd');
@@ -41,14 +49,21 @@ export const useHabitStore = create<HabitState>((set, get) => ({
         api.get<HabitLog[]>(`/habits/logs?start_date=${startDateStr}&end_date=${date}`)
       ]);
 
-      set({
-        habits: habitsResponse.data,
-        logs: logsResponse.data,
-        isLoading: false
+      set((state) => {
+        const filteredLogs = state.logs.filter(
+          (log) => log.target_date < startDateStr || log.target_date > date
+        );
+
+        return {
+          habits: habitsResponse.data,
+          logs: [...filteredLogs, ...logsResponse.data],
+          isLoading: false,
+          isBackgroundFetching: false
+        };
       });
     } catch (error) {
       console.error('Erro ao carregar hábitos:', error);
-      set({ isLoading: false });
+      set({ isLoading: false, isBackgroundFetching: false });
     }
   },
 
@@ -189,11 +204,21 @@ export const useHabitStore = create<HabitState>((set, get) => ({
       
       const response = await api.post<HabitLog>(`/habits/${habitId}/toggle?${queryParams.toString()}`);
       
-      set((state) => ({
-        logs: state.logs.map((log) =>
+      set((state) => {
+        if (!response.data || Object.keys(response.data).length === 0) {
+           return { logs: state.logs.filter(log => !(log.habit_id === habitId && log.target_date === date)) };
+        }
+        
+        const updatedLogs = state.logs.map((log) =>
           log.habit_id === habitId && log.target_date === date ? response.data : log
-        )
-      }));
+        );
+        
+        if (!updatedLogs.some(l => l.habit_id === habitId && l.target_date === date)) {
+          updatedLogs.push(response.data);
+        }
+        
+        return { logs: updatedLogs };
+      });
     } catch (error) {
       console.error('Erro ao alternar hábito:', error);
       set({ logs: previousLogs });
