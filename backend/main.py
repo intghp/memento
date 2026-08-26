@@ -1,3 +1,5 @@
+import os
+import shutil
 from datetime import date
 from typing import Optional
 from sqlmodel import select
@@ -6,7 +8,8 @@ from database import get_session, init_db
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel.ext.asyncio.session import AsyncSession
-from fastapi import FastAPI, Depends, HTTPException, Query
+from fastapi import FastAPI, Depends, HTTPException, Query, UploadFile, File
+from fastapi.responses import FileResponse
 
 from models import (
     Task, TaskCreate,
@@ -314,3 +317,34 @@ async def delete_habit(habit_id: int, session: AsyncSession = Depends(get_sessio
     await session.delete(habit)
     await session.commit()
     return {"message": "Habit deleted successfully"}
+
+# ==========================================
+# ROTAS DE SISTEMA (BACKUP / RESTAURAÇÃO)
+# ==========================================
+
+DB_FILE_PATH = "memento.db"
+
+@app.get("/api/system/export")
+def export_database():
+    """Baixa o arquivo do banco de dados atual."""
+    if os.path.exists(DB_FILE_PATH):
+        return FileResponse(
+            path=DB_FILE_PATH, 
+            media_type="application/octet-stream", 
+            filename="memento_backup.db"
+        )
+    raise HTTPException(status_code=404, detail="Banco de dados não encontrado.")
+
+@app.post("/api/system/import")
+def import_database(file: UploadFile = File(...)):
+    """Recebe um arquivo .db e substitui o banco atual."""
+    if not file.filename.endswith('.db'):
+        raise HTTPException(status_code=400, detail="O arquivo deve ser um .db válido.")
+    
+    try:
+        # Substitui o arquivo atual pelo que o usuário fez upload
+        with open(DB_FILE_PATH, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+        return {"message": "Backup restaurado com sucesso! Atualize a página."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao restaurar backup: {str(e)}")
