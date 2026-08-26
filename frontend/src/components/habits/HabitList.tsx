@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Check, X, Sunrise, Sun, Moon, Maximize, Settings, Trash2, Pencil, Minus } from 'lucide-react';
+import { Plus, Check, X, Sunrise, Sun, Moon, Maximize, Trash2, Pencil, Minus, EllipsisVertical } from 'lucide-react';
 import { useHabitStore } from '../../store/useHabitStore';
 import { useDateStore } from '../../store/useDateStore';
 import { cn } from '../../utils/cn';
@@ -197,7 +197,7 @@ export function HabitList() {
               )}
               title="Configurar Hábitos"
             >
-              <Settings className="w-5 h-5" />
+              <EllipsisVertical className="w-5 h-5" />
             </button>
 
             <button 
